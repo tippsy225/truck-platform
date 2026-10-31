@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block title %}Available Loads{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Available Loads</h1>
+<div class="row g-3">
+  {% for load in loads %}
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="card h-100 shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <h5 class="card-title">{{ load.title }}</h5>
+          <span class="badge bg-success">{{ load.get_status_display }}</span>
+        </div>
+        <p class="mb-1">{{ load.pickup }} to {{ load.destination }}</p>
+        <p class="mb-1 text-muted">{{ load.weight_tonnes }} tonnes</p>
+        <p class="mb-1 text-muted">Pickup: {{ load.pickup_date|date:"d M Y"|default:"Not set" }}</p>
+        <p class="fw-bold mb-0">Offered: ${{ load.offered_price }}</p>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <p>No loads posted yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

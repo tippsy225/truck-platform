@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block title %}Available Trucks{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Available Trucks</h1>
+<div class="row g-3">
+  {% for truck in trucks %}
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="card h-100 shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <h5 class="card-title">{{ truck.get_truck_type_display }}</h5>
+          <span class="badge bg-primary">{{ truck.capacity_tonnes }} t</span>
+        </div>
+        <p class="mb-1">Now in {{ truck.current_location }}{% if truck.heading_to %}, heading to {{ truck.heading_to }}{% endif %}</p>
+        <p class="mb-1 text-muted">Available from: {{ truck.available_from|date:"d M Y"|default:"Now" }}</p>
+        <p class="mb-1 text-muted">Transporter: {{ truck.owner.username }}</p>
+        <p class="small text-muted mb-0">Contact details unlock after booking.</p>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <p>No trucks available yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}
