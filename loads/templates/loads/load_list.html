@@ -16,12 +16,13 @@
         <p class="mb-1">{{ load.pickup }} to {{ load.destination }}</p>
         <p class="mb-1 text-muted">{{ load.weight_tonnes }} tonnes</p>
         <p class="mb-1 text-muted">Pickup: {{ load.pickup_date|date:"d M Y"|default:"Not set" }}</p>
-        <p class="fw-bold mb-0">Offered: ${{ load.offered_price }}</p>
+        <p class="fw-bold">Shipper's price: ${{ load.offered_price }}</p>
+        <a href="{% url 'load_detail' load.pk %}" class="btn btn-sm btn-primary">View and make an offer</a>
       </div>
     </div>
   </div>
   {% empty %}
-  <p>No loads posted yet.</p>
+  <p>No open loads right now.</p>
   {% endfor %}
 </div>
 {% endblock %}

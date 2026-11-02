@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ load.title }}{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-12 col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <h2 class="h4">{{ load.title }}</h2>
+          <span class="badge bg-success">{{ load.get_status_display }}</span>
+        </div>
+        <p class="mb-1">{{ load.pickup }} to {{ load.destination }}</p>
+        <p class="mb-1 text-muted">{{ load.weight_tonnes }} tonnes</p>
+        <p class="mb-1 text-muted">Pickup: {{ load.pickup_date|date:"d M Y"|default:"Not set" }}</p>
+        <p class="fw-bold mb-0">Shipper's price: ${{ load.offered_price }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-7">
+    {% if can_see_contacts %}
+    <div class="alert alert-success">
+      <strong>Booked at ${{ accepted_offer.price }}.</strong><br>
+      Shipper {{ load.shipper.username }}: {{ load.shipper.profile.phone|default:"no phone given" }}<br>
+      Transporter {{ accepted_offer.transporter.username }}: {{ accepted_offer.transporter.profile.phone|default:"no phone given" }}
+    </div>
+    {% endif %}
+
+    {% if form %}
+    <h3 class="h5">Make an offer</h3>
+    <p class="text-muted small">Suggest your own price. The shipper can accept or decline.</p>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit" class="btn btn-primary">Send offer</button>
+    </form>
+    {% endif %}
+
+    {% if is_owner %}
+    <h3 class="h5">Offers received</h3>
+    {% for offer in offers %}
+    <div class="card mb-2">
+      <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <strong>${{ offer.price }}</strong> from {{ offer.transporter.username }}
+          <span class="badge bg-secondary">{{ offer.get_status_display }}</span><br>
+          {% if offer.truck %}<span class="small text-muted">{{ offer.truck }}</span><br>{% endif %}
+          {% if offer.message %}<span class="small">{{ offer.message }}</span>{% endif %}
+        </div>
+        {% if offer.status == 'pending' and load.status == 'open' %}
+        <span class="d-flex gap-1">
+          <form method="post" action="{% url 'respond_offer' offer.pk 'accept' %}">
+            {% csrf_token %}<button class="btn btn-sm btn-success">Accept</button>
+          </form>
+          <form method="post" action="{% url 'respond_offer' offer.pk 'decline' %}">
+            {% csrf_token %}<button class="btn btn-sm btn-outline-danger">Decline</button>
+          </form>
+        </span>
+        {% endif %}
+      </div>
+    </div>
+    {% empty %}
+    <p>No offers yet.</p>
+    {% endfor %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

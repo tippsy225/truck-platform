@@ -14,8 +14,11 @@
         {% if user.is_authenticated %}
           {% if user.profile.role == 'shipper' %}
             <a href="{% url 'truck_list' %}" class="btn btn-sm btn-outline-primary">Available trucks</a>
+            <a href="{% url 'post_load' %}" class="btn btn-sm btn-outline-primary">Post a load</a>
+            <a href="{% url 'my_loads' %}" class="btn btn-sm btn-outline-primary">My loads</a>
           {% elif user.profile.role == 'transporter' %}
             <a href="{% url 'load_list' %}" class="btn btn-sm btn-outline-primary">Available loads</a>
+            <a href="{% url 'my_offers' %}" class="btn btn-sm btn-outline-primary">My offers</a>
             <a href="{% url 'add_truck' %}" class="btn btn-sm btn-outline-primary">Register a truck</a>
           {% else %}
             <a href="{% url 'load_list' %}" class="btn btn-sm btn-outline-primary">Loads</a>
@@ -34,6 +37,9 @@
     </div>
   </nav>
   <div class="container pb-4">
+    {% for message in messages %}
+      <div class="alert alert-info">{{ message }}</div>
+    {% endfor %}
     {% block content %}{% endblock %}
   </div>
 </body>

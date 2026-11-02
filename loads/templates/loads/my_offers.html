@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block title %}My offers{% endblock %}
+
+{% block content %}
+<h1 class="mb-3">My offers</h1>
+{% for offer in offers %}
+<div class="card mb-2">
+  <div class="card-body">
+    <div class="d-flex justify-content-between">
+      <strong>{{ offer.load.title }}: {{ offer.load.pickup }} to {{ offer.load.destination }}</strong>
+      <span class="badge bg-secondary">{{ offer.get_status_display }}</span>
+    </div>
+    <p class="mb-1">Your offer: ${{ offer.price }} (shipper asked ${{ offer.load.offered_price }})</p>
+    {% if offer.status == 'accepted' %}
+      <p class="mb-0 fw-bold">Shipper {{ offer.load.shipper.username }}: {{ offer.load.shipper.profile.phone|default:"no phone given" }}</p>
+    {% endif %}
+  </div>
+</div>
+{% empty %}
+<p>You have not made any offers yet. Browse <a href="{% url 'load_list' %}">available loads</a>.</p>
+{% endfor %}
+{% endblock %}
