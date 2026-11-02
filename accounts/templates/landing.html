@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}TruckLink: loads and trucks across Zimbabwe{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div>
+    <h1><span>Find a truck for your load.</span><span>Find a load for your truck.</span></h1>
+    <p class="lead-text">Shippers post what needs moving. Transporters send offers at their own price. You pick the offer you want.</p>
+    <div class="hero-actions">
+      <a href="{% url 'register' %}" class="btn btn-primary btn-lg">Post a load</a>
+      <a href="{% url 'register' %}" class="btn btn-warning btn-lg">Register a truck</a>
+      <a href="{% url 'login' %}" class="hero-login">I already have an account</a>
+    </div>
+    {% if open_loads or open_trucks %}
+    <p class="live">{{ open_loads }} load{{ open_loads|pluralize }} open and {{ open_trucks }} truck{{ open_trucks|pluralize }} available right now.</p>
+    {% endif %}
+  </div>
+
+  <aside class="waybill" aria-label="Example of a load with offers">
+    <div class="waybill-head">
+      <span>Cement bags, 10 tonnes</span>
+      <span class="tag">Example</span>
+    </div>
+    <div class="route"><span class="town">Harare</span><span class="line"></span><span class="town">Bulawayo</span></div>
+    <p class="ask">The shipper asks <strong>$800</strong>. Offers received:</p>
+    <ul class="bids">
+      <li><span>Flatbed, 20 tonnes</span><strong>$780</strong></li>
+      <li><span>Tipper, 15 tonnes</span><strong>$750</strong></li>
+      <li class="best"><span>Flatbed, 30 tonnes</span><strong>$720</strong></li>
+    </ul>
+  </aside>
+</section>
+
+<section class="how" aria-labelledby="how-title">
+  <h2 id="how-title">How it works</h2>
+  <div class="steps">
+    <div class="step">
+      <span class="step-num">1</span>
+      <h3>Post or register</h3>
+      <p>Shippers describe the load and set a price. Transporters add their truck.</p>
+    </div>
+    <div class="step">
+      <span class="step-num">2</span>
+      <h3>Compare offers</h3>
+      <p>Transporters send offers on open loads. The shipper sees every price and picks one.</p>
+    </div>
+    <div class="step">
+      <span class="step-num">3</span>
+      <h3>Unlock contacts</h3>
+      <p>Once an offer is accepted, each side pays a small platform fee. Phone numbers appear when both have paid.</p>
+    </div>
+  </div>
+</section>
+
+<section class="closing">
+  <div>
+    <h2>Posting is free.</h2>
+    <p>A small platform fee applies only when an offer is accepted.</p>
+  </div>
+  <a href="{% url 'register' %}" class="btn btn-warning btn-lg">Create an account</a>
+</section>
+{% endblock %}

@@ -1,6 +1,9 @@
 from django.contrib.auth import login
 from django.shortcuts import redirect, render
 
+from loads.models import Load
+from trucks.models import Truck
+
 from .forms import RegisterForm
 
 
@@ -9,7 +12,11 @@ def home(request):
         profile = getattr(request.user, 'profile', None)
         if profile and profile.role == 'shipper':
             return redirect('truck_list')
-    return redirect('load_list')
+        return redirect('load_list')
+    return render(request, 'landing.html', {
+        'open_loads': Load.objects.filter(status='open').count(),
+        'open_trucks': Truck.objects.filter(is_available=True).count(),
+    })
 
 
 def register(request):

@@ -1,28 +1,32 @@
 {% extends 'base.html' %}
 
-{% block title %}Available Loads{% endblock %}
+{% block title %}Available loads{% endblock %}
 
 {% block content %}
-<h1 class="mb-4">Available Loads</h1>
+<div class="page-head">
+  <h1>Available loads</h1>
+  <p class="muted mb-0">Open a load to see the details and send your offer.</p>
+</div>
 <div class="row g-3">
   {% for load in loads %}
-  <div class="col-12 col-md-6 col-lg-4">
-    <div class="card h-100 shadow-sm">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-start">
-          <h5 class="card-title">{{ load.title }}</h5>
-          <span class="badge bg-success">{{ load.get_status_display }}</span>
+  <div class="col-12 col-md-6 col-xl-4">
+    <article class="card h-100">
+      <div class="card-body d-flex flex-column">
+        <div class="route"><span class="town">{{ load.pickup }}</span><span class="line"></span><span class="town">{{ load.destination }}</span></div>
+        <h2 class="load-title">{{ load.title }}</h2>
+        <dl class="facts">
+          <div><dt>Weight</dt><dd>{{ load.weight_tonnes }} t</dd></div>
+          <div><dt>Pickup</dt><dd>{{ load.pickup_date|date:"d M Y"|default:"Date not set" }}</dd></div>
+        </dl>
+        <div class="load-foot mt-auto">
+          <div class="price"><span class="price-label">Shipper asks</span><strong>${{ load.offered_price }}</strong></div>
+          <a href="{% url 'load_detail' load.pk %}" class="btn btn-primary">Make an offer</a>
         </div>
-        <p class="mb-1">{{ load.pickup }} to {{ load.destination }}</p>
-        <p class="mb-1 text-muted">{{ load.weight_tonnes }} tonnes</p>
-        <p class="mb-1 text-muted">Pickup: {{ load.pickup_date|date:"d M Y"|default:"Not set" }}</p>
-        <p class="fw-bold">Shipper's price: ${{ load.offered_price }}</p>
-        <a href="{% url 'load_detail' load.pk %}" class="btn btn-sm btn-primary">View and make an offer</a>
       </div>
-    </div>
+    </article>
   </div>
   {% empty %}
-  <p>No open loads right now.</p>
+  <div class="col-12"><div class="empty">No open loads right now. When a shipper posts one, it will appear here.</div></div>
   {% endfor %}
 </div>
 {% endblock %}
