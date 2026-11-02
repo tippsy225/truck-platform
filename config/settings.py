@@ -146,3 +146,11 @@ try:
     from .local_settings import *
 except ImportError:
     pass
+PRICING = {
+    'road_factor': 1.2,
+    'base': 30.0,
+    'per_km': 0.45,
+    'per_tonne_km': 0.025,
+    'minimum': 50.0,
+    'range': 0.15,
+}

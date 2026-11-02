@@ -3,12 +3,80 @@
 {% block title %}Post a load{% endblock %}
 
 {% block content %}
-<div style="max-width: 500px;">
-  <h1 class="mb-3">Post a load</h1>
-  <form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit" class="btn btn-primary">Post load</button>
-  </form>
+<div class="page-head">
+  <h1>Post a load</h1>
+  <p class="muted mb-0">Set the price you are willing to pay. Transporters can offer less or more.</p>
 </div>
+
+<div class="row g-4">
+  <div class="col-12 col-lg-6">
+    <form method="post" class="card p-4">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit" class="btn btn-primary">Post load</button>
+    </form>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card p-4" aria-live="polite">
+      <h2 class="h5">Price guide</h2>
+      <p class="muted mb-0" id="price-msg">Choose the pickup town, the destination and the weight to see a suggested price.</p>
+      <div id="price-result" hidden>
+        <p class="mb-1 muted" id="price-distance"></p>
+        <p class="mb-0 muted">Suggested price</p>
+        <p class="display-font mb-1" style="font-size:2.4rem;" id="price-suggested"></p>
+        <p class="mb-3" id="price-range"></p>
+        <button type="button" class="btn btn-warning" id="price-use">Use this price</button>
+        <p class="small muted mt-3 mb-0">This is an estimate from distance and weight. Fuel prices, road conditions and the type of truck can change what transporters ask.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var pickup = document.getElementById('id_pickup');
+  var dest = document.getElementById('id_destination');
+  var weight = document.getElementById('id_weight_tonnes');
+  var price = document.getElementById('id_offered_price');
+  var msg = document.getElementById('price-msg');
+  var box = document.getElementById('price-result');
+  var suggested = null;
+  var timer = null;
+
+  function update() {
+    if (!pickup.value || !dest.value || !weight.value) {
+      box.hidden = true;
+      msg.hidden = false;
+      return;
+    }
+    var url = '{% url "price_suggestion" %}?pickup=' + encodeURIComponent(pickup.value) +
+      '&destination=' + encodeURIComponent(dest.value) +
+      '&tonnes=' + encodeURIComponent(weight.value);
+    fetch(url).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.ok) {
+        box.hidden = true;
+        msg.hidden = false;
+        msg.textContent = 'Choose two different towns and a weight above zero.';
+        return;
+      }
+      suggested = d.suggested;
+      msg.hidden = true;
+      box.hidden = false;
+      document.getElementById('price-distance').textContent = 'About ' + d.distance_km + ' km by road';
+      document.getElementById('price-suggested').textContent = '$' + d.suggested;
+      document.getElementById('price-range').textContent = 'Typical range: $' + d.low + ' to $' + d.high;
+    });
+  }
+
+  function later() { clearTimeout(timer); timer = setTimeout(update, 300); }
+  pickup.addEventListener('change', update);
+  dest.addEventListener('change', update);
+  weight.addEventListener('input', later);
+  document.getElementById('price-use').addEventListener('click', function () {
+    if (suggested !== null) { price.value = suggested; price.focus(); }
+  });
+  update();
+})();
+</script>
 {% endblock %}
