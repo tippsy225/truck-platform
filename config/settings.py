@@ -130,3 +130,19 @@ MAILERS = {
 }
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'home'
+PAYMENT_MODE = 'demo'   # 'demo' = simulated payments, 'paynow' = real Paynow
+
+PAYNOW_INTEGRATION_ID = ''
+PAYNOW_INTEGRATION_KEY = ''
+PAYNOW_AUTH_EMAIL = ''
+PAYNOW_RESULT_URL = 'http://127.0.0.1:8000/loads/'
+PAYNOW_RETURN_URL = 'http://127.0.0.1:8000/loads/'
+
+PLATFORM_FEE_PERCENT_SHIPPER = 2.5
+PLATFORM_FEE_PERCENT_TRANSPORTER = 2.5
+PLATFORM_FEE_MINIMUM = 1
+
+try:
+    from .local_settings import *
+except ImportError:
+    pass

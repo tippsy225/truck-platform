@@ -13,7 +13,7 @@
           <h5 class="card-title">{{ truck.get_truck_type_display }}</h5>
           <span class="badge bg-primary">{{ truck.capacity_tonnes }} t</span>
         </div>
-        <p class="mb-1">Now in {{ truck.current_location }}{% if truck.heading_to %}, heading to {{ truck.heading_to }}{% endif %}</p>
+        <p class="mb-1">Now in {{ truck.current_location }}</p>
         <p class="mb-1 text-muted">Available from: {{ truck.available_from|date:"d M Y"|default:"Now" }}</p>
         <p class="mb-1 text-muted">Transporter: {{ truck.owner.username }}</p>
         <p class="small text-muted mb-0">Contact details unlock after booking.</p>

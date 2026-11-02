@@ -13,7 +13,14 @@
     </div>
     <p class="mb-1">Your offer: ${{ offer.price }} (shipper asked ${{ offer.load.offered_price }})</p>
     {% if offer.status == 'accepted' %}
-      <p class="mb-0 fw-bold">Shipper {{ offer.load.shipper.username }}: {{ offer.load.shipper.profile.phone|default:"no phone given" }}</p>
+      {% if offer.fee_paid %}
+        <p class="mb-0 fw-bold">Shipper {{ offer.load.shipper.username }}: {{ offer.load.shipper.profile.phone|default:"no phone given" }}</p>
+      {% elif offer.transporter_paid %}
+        <p class="mb-0 text-muted">Your fee is paid. Waiting for the shipper to pay theirs.</p>
+      {% else %}
+        <p class="mb-1 text-muted">Accepted. Pay your platform fee of ${{ offer.transporter_fee }} to unlock contact details.</p>
+        <a href="{% url 'load_detail' offer.load.pk %}" class="btn btn-sm btn-success">Pay my fee</a>
+      {% endif %}
     {% endif %}
   </div>
 </div>

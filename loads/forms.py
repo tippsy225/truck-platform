@@ -28,3 +28,13 @@ class OfferForm(forms.ModelForm):
         if user is not None:
             self.fields['truck'].queryset = user.trucks.all()
         self.fields['truck'].required = False
+
+
+class PaymentForm(forms.Form):
+    phone = forms.CharField(max_length=15, label='EcoCash number')
+
+    def clean_phone(self):
+        phone = self.cleaned_data['phone'].replace(' ', '')
+        if not (phone.isdigit() and len(phone) == 10 and phone.startswith('07')):
+            raise forms.ValidationError('Enter a 10-digit number like 0771234567.')
+        return phone

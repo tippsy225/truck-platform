@@ -20,12 +20,41 @@
   </div>
 
   <div class="col-12 col-lg-7">
-    {% if can_see_contacts %}
-    <div class="alert alert-success">
-      <strong>Booked at ${{ accepted_offer.price }}.</strong><br>
-      Shipper {{ load.shipper.username }}: {{ load.shipper.profile.phone|default:"no phone given" }}<br>
-      Transporter {{ accepted_offer.transporter.username }}: {{ accepted_offer.transporter.profile.phone|default:"no phone given" }}
-    </div>
+    {% if accepted_offer %}
+      {% if can_see_contacts %}
+      <div class="alert alert-success">
+        <strong>Booked at ${{ accepted_offer.price }}. Both platform fees paid.</strong><br>
+        Shipper {{ load.shipper.username }}: {{ load.shipper.profile.phone|default:"no phone given" }}<br>
+        Transporter {{ accepted_offer.transporter.username }}: {{ accepted_offer.transporter.profile.phone|default:"no phone given" }}
+      </div>
+      {% elif is_party %}
+      <div class="card border-warning mb-3">
+        <div class="card-body">
+          <h3 class="h5">Unlock contact details</h3>
+          <p>Offer accepted at ${{ accepted_offer.price }}. Each side pays a small platform fee, and contact details appear when both have paid.</p>
+          <ul class="mb-3">
+            <li>Shipper fee: ${{ accepted_offer.shipper_fee }}, {% if accepted_offer.shipper_paid %}paid{% else %}not paid yet{% endif %}</li>
+            <li>Transporter fee: ${{ accepted_offer.transporter_fee }}, {% if accepted_offer.transporter_paid %}paid{% else %}not paid yet{% endif %}</li>
+          </ul>
+          {% if my_paid %}
+            <p class="mb-0">Your fee is paid. Waiting for the other side to pay theirs.</p>
+          {% elif pending_payment %}
+            <p>A payment request was sent to {{ pending_payment.phone }}. Enter your EcoCash PIN on your phone, then check.</p>
+            <form method="post" action="{% url 'check_payment' pending_payment.pk %}">
+              {% csrf_token %}
+              <button class="btn btn-warning">Check payment</button>
+            </form>
+          {% else %}
+            <p class="mb-2">Your fee: <strong>${{ my_fee }}</strong></p>
+            <form method="post" action="{% url 'pay_fee' accepted_offer.pk %}">
+              {% csrf_token %}
+              {{ payment_form.as_p }}
+              <button class="btn btn-success">Pay my fee with EcoCash</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
     {% endif %}
 
     {% if form %}
