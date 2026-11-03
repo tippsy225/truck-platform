@@ -1,4 +1,5 @@
 from django.contrib.auth import login
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 
 from loads.models import Load
@@ -29,3 +30,10 @@ def register(request):
     else:
         form = RegisterForm()
     return render(request, 'accounts/register.html', {'form': form})
+
+
+@login_required
+def notifications(request):
+    items = list(request.user.notifications.all()[:50])
+    request.user.notifications.filter(is_read=False).update(is_read=True)
+    return render(request, 'accounts/notifications.html', {'items': items})

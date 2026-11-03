@@ -3,28 +3,38 @@
 {% block title %}My offers{% endblock %}
 
 {% block content %}
-<h1 class="mb-3">My offers</h1>
+<div class="page-head">
+  <h1>My offers</h1>
+  <p class="muted mb-0">Track every offer, counter and booking in one place.</p>
+</div>
 {% for offer in offers %}
 <div class="card mb-2">
   <div class="card-body">
-    <div class="d-flex justify-content-between">
-      <strong>{{ offer.load.title }}: {{ offer.load.pickup }} to {{ offer.load.destination }}</strong>
+    <div class="route"><span class="town">{{ offer.load.pickup }}</span><span class="line"></span><span class="town">{{ offer.load.destination }}</span></div>
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+      <strong>{{ offer.load.title }}</strong>
       <span class="badge bg-secondary">{{ offer.get_status_display }}</span>
     </div>
-    <p class="mb-1">Your offer: ${{ offer.price }} (shipper asked ${{ offer.load.offered_price }})</p>
-    {% if offer.status == 'accepted' %}
+    <p class="mb-1">Your price: ${{ offer.price }} (shipper asked ${{ offer.load.offered_price }})</p>
+
+    {% if offer.status == 'countered' %}
+      <p class="mb-2"><strong>The shipper countered at ${{ offer.price }}.</strong> Your move.</p>
+      <a href="{% url 'load_detail' offer.load.pk %}" class="btn btn-sm btn-primary">Respond</a>
+    {% elif offer.status == 'accepted' %}
       {% if offer.fee_paid %}
         <p class="mb-0 fw-bold">Shipper {{ offer.load.shipper.username }}: {{ offer.load.shipper.profile.phone|default:"no phone given" }}</p>
       {% elif offer.transporter_paid %}
-        <p class="mb-0 text-muted">Your fee is paid. Waiting for the shipper to pay theirs.</p>
+        <p class="mb-0 muted">Your fee is paid. Waiting for the shipper to pay theirs.</p>
       {% else %}
-        <p class="mb-1 text-muted">Accepted. Pay your platform fee of ${{ offer.transporter_fee }} to unlock contact details.</p>
+        <p class="mb-2 muted">Agreed. Pay your platform fee of ${{ offer.transporter_fee }}{% if offer.pay_deadline %} by {{ offer.pay_deadline|date:"d M, H:i" }}{% endif %} to unlock contact details.</p>
         <a href="{% url 'load_detail' offer.load.pk %}" class="btn btn-sm btn-success">Pay my fee</a>
       {% endif %}
+    {% else %}
+      <a href="{% url 'load_detail' offer.load.pk %}" class="btn btn-sm btn-outline-primary">View</a>
     {% endif %}
   </div>
 </div>
 {% empty %}
-<p>You have not made any offers yet. Browse <a href="{% url 'load_list' %}">available loads</a>.</p>
+<div class="empty">You have not made any offers yet. Browse <a href="{% url 'load_list' %}">available loads</a>.</div>
 {% endfor %}
 {% endblock %}

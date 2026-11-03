@@ -5,8 +5,44 @@
 {% block content %}
 <div class="page-head">
   <h1>Available loads</h1>
-  <p class="muted mb-0">Open a load to see the details and send your offer.</p>
+  <p class="muted mb-0">Open a load to see the details and send your offer. Urgent loads come first.</p>
 </div>
+
+<form method="get" class="filters">
+  <div>
+    <label for="f-pickup">From</label>
+    <select id="f-pickup" name="pickup">
+      <option value="">Any town</option>
+      {% for t in towns %}<option value="{{ t }}" {% if selected.pickup == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="f-dest">To</label>
+    <select id="f-dest" name="destination">
+      <option value="">Any town</option>
+      {% for t in towns %}<option value="{{ t }}" {% if selected.destination == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="f-cargo">Cargo</label>
+    <select id="f-cargo" name="cargo">
+      <option value="">All cargo</option>
+      {% for value, label in cargo_choices %}<option value="{{ value }}" {% if selected.cargo == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="f-truck">My truck type</label>
+    <select id="f-truck" name="truck">
+      <option value="">All trucks</option>
+      {% for value, label in truck_choices %}<option value="{{ value }}" {% if selected.truck == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary flex-grow-1">Search</button>
+    {% if filtered %}<a href="{% url 'load_list' %}" class="btn btn-outline-primary">Clear</a>{% endif %}
+  </div>
+</form>
+
 <div class="row g-3">
   {% for load in loads %}
   <div class="col-12 col-md-6 col-xl-4">
@@ -14,6 +50,12 @@
       <div class="card-body d-flex flex-column">
         <div class="route"><span class="town">{{ load.pickup }}</span><span class="line"></span><span class="town">{{ load.destination }}</span></div>
         <h2 class="load-title">{{ load.title }}</h2>
+        <div class="chips">
+          {% if load.urgency == 'urgent' %}<span class="chip chip-urgent">Urgent</span>{% endif %}
+          <span class="chip">{{ load.get_cargo_type_display }}</span>
+          {% if load.insured %}<span class="chip chip-ok">Insured</span>{% else %}<span class="chip chip-warn">Not insured</span>{% endif %}
+          {% if load.truck_type_needed != 'any' %}<span class="chip">{{ load.get_truck_type_needed_display }}</span>{% endif %}
+        </div>
         <dl class="facts">
           <div><dt>Weight</dt><dd>{{ load.weight_tonnes }} t</dd></div>
           <div><dt>Pickup</dt><dd>{{ load.pickup_date|date:"d M Y"|default:"Date not set" }}</dd></div>
@@ -26,7 +68,9 @@
     </article>
   </div>
   {% empty %}
-  <div class="col-12"><div class="empty">No open loads right now. When a shipper posts one, it will appear here.</div></div>
+  <div class="col-12"><div class="empty">
+    {% if filtered %}No loads match these filters. Try removing one.{% else %}No open loads right now. When a shipper posts one, it will appear here.{% endif %}
+  </div></div>
   {% endfor %}
 </div>
 {% endblock %}

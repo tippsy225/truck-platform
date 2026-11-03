@@ -3,35 +3,60 @@
 {% block title %}{{ load.title }}{% endblock %}
 
 {% block content %}
-<div class="row g-4">
+<div class="row g-4 mt-1">
   <div class="col-12 col-lg-5">
-    <div class="card shadow-sm">
+    <div class="card">
       <div class="card-body">
-        <div class="d-flex justify-content-between align-items-start">
-          <h2 class="h4">{{ load.title }}</h2>
+        <div class="route"><span class="town">{{ load.pickup }}</span><span class="line"></span><span class="town">{{ load.destination }}</span></div>
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <h1 class="h3" style="margin-top:0;">{{ load.title }}</h1>
           <span class="badge bg-success">{{ load.get_status_display }}</span>
         </div>
-        <p class="mb-1">{{ load.pickup }} to {{ load.destination }}</p>
-        <p class="mb-1 text-muted">{{ load.weight_tonnes }} tonnes</p>
-        <p class="mb-1 text-muted">Pickup: {{ load.pickup_date|date:"d M Y"|default:"Not set" }}</p>
-        <p class="fw-bold mb-0">Shipper's price: ${{ load.offered_price }}</p>
+        <div class="chips mt-2">
+          {% if load.urgency == 'urgent' %}<span class="chip chip-urgent">Urgent</span>{% endif %}
+          <span class="chip">{{ load.get_cargo_type_display }}</span>
+          {% if load.insured %}
+            <span class="chip chip-ok">Insured{% if load.insurance_provider %} by {{ load.insurance_provider }}{% endif %}</span>
+          {% else %}
+            <span class="chip chip-warn">Not insured</span>
+          {% endif %}
+        </div>
+        {% if load.description %}<p>{{ load.description }}</p>{% endif %}
+        <dl class="facts">
+          <div><dt>Weight</dt><dd>{{ load.weight_tonnes }} t</dd></div>
+          <div><dt>Pickup</dt><dd>{{ load.pickup_date|date:"d M Y"|default:"Date not set" }}</dd></div>
+          <div><dt>Truck needed</dt><dd>{{ load.get_truck_type_needed_display }}</dd></div>
+        </dl>
+        {% if load.insured and load.coverage_amount %}<p class="small muted">Cargo cover: ${{ load.coverage_amount }}</p>{% endif %}
+        <div class="price"><span class="price-label">Shipper asks</span><strong>${{ load.offered_price }}</strong></div>
+
+        {% if can_deliver %}
+        <form method="post" action="{% url 'mark_delivered' load.pk %}" class="mt-3">
+          {% csrf_token %}
+          <button class="btn btn-warning">Mark as delivered</button>
+        </form>
+        {% endif %}
       </div>
     </div>
   </div>
 
   <div class="col-12 col-lg-7">
-    {% if accepted_offer %}
+
+    {% if accepted_offer and is_party %}
       {% if can_see_contacts %}
       <div class="alert alert-success">
         <strong>Booked at ${{ accepted_offer.price }}. Both platform fees paid.</strong><br>
         Shipper {{ load.shipper.username }}: {{ load.shipper.profile.phone|default:"no phone given" }}<br>
         Transporter {{ accepted_offer.transporter.username }}: {{ accepted_offer.transporter.profile.phone|default:"no phone given" }}
       </div>
-      {% elif is_party %}
+      {% else %}
       <div class="card border-warning mb-3">
         <div class="card-body">
-          <h3 class="h5">Unlock contact details</h3>
-          <p>Offer accepted at ${{ accepted_offer.price }}. Each side pays a small platform fee, and contact details appear when both have paid.</p>
+          <h2 class="h5">Unlock contact details</h2>
+          <p class="mb-2">Agreed at ${{ accepted_offer.price }}. Each side pays a small platform fee, and contact details appear when both have paid.</p>
+          {% if deadline %}
+          <p class="mb-2"><strong>Pay by {{ deadline|date:"d M, H:i" }}</strong> ({{ deadline|timeuntil }} left). If both fees are not paid by then, the booking is cancelled and the load opens again.</p>
+          {% endif %}
           <ul class="mb-3">
             <li>Shipper fee: ${{ accepted_offer.shipper_fee }}, {% if accepted_offer.shipper_paid %}paid{% else %}not paid yet{% endif %}</li>
             <li>Transporter fee: ${{ accepted_offer.transporter_fee }}, {% if accepted_offer.transporter_paid %}paid{% else %}not paid yet{% endif %}</li>
@@ -57,41 +82,125 @@
       {% endif %}
     {% endif %}
 
-    {% if form %}
-    <h3 class="h5">Make an offer</h3>
-    <p class="text-muted small">Suggest your own price. The shipper can accept or decline.</p>
-    <form method="post">
-      {% csrf_token %}
-      {{ form.as_p }}
-      <button type="submit" class="btn btn-primary">Send offer</button>
-    </form>
+    {% if role == 'transporter' and not is_owner %}
+      {% if my_offer and my_offer.status != 'accepted' %}
+      <div class="card mb-3">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <h2 class="h5">Your offer: ${{ my_offer.price }}</h2>
+            <span class="badge bg-secondary">{{ my_offer.get_status_display }}</span>
+          </div>
+          <ul class="timeline">
+            {% for e in my_offer.events.all %}
+            <li>{{ e.get_kind_display }}{% if e.price %} at ${{ e.price }}{% endif %} by {{ e.actor.username|default:"TruckLink" }}, {{ e.created_at|timesince }} ago</li>
+            {% endfor %}
+          </ul>
+          {% if my_offer.status == 'countered' and load.status == 'open' %}
+          <p class="mb-2"><strong>The shipper countered at ${{ my_offer.price }}.</strong> Your move.</p>
+          <div class="d-flex flex-wrap gap-2 align-items-end">
+            <form method="post" action="{% url 'offer_action' my_offer.pk 'accept' %}">
+              {% csrf_token %}<button class="btn btn-success">Accept ${{ my_offer.price }}</button>
+            </form>
+            <form method="post" action="{% url 'offer_action' my_offer.pk 'counter' %}" class="d-flex gap-2 align-items-end">
+              {% csrf_token %}
+              <div>
+                <label class="small" for="counter-mine">Counter price (USD)</label>
+                <input id="counter-mine" type="number" name="price" min="1" step="0.01" required>
+              </div>
+              <button class="btn btn-outline-primary">Counter</button>
+            </form>
+          </div>
+          {% else %}
+          <p class="muted mb-2">Waiting for the shipper to respond.</p>
+          {% endif %}
+          {% if load.status == 'open' %}
+          <form method="post" action="{% url 'offer_action' my_offer.pk 'withdraw' %}" class="mt-2">
+            {% csrf_token %}<button class="btn btn-sm btn-outline-danger">Withdraw offer</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% elif not my_offer and load.status == 'open' %}
+        {% if not has_trucks %}
+        <div class="alert alert-warning">You need a registered truck before you can send an offer. <a href="{% url 'add_truck' %}">Register a truck</a>.</div>
+        {% elif form %}
+        <div class="card mb-3">
+          <div class="card-body">
+            <h2 class="h5">Make an offer</h2>
+            <div class="alert alert-info" id="price-hint" hidden></div>
+            <p class="muted small">Suggest your own price. The shipper can accept, counter or decline. Your truck must carry the weight and have valid insurance and roadworthy dates.</p>
+            <form method="post">
+              {% csrf_token %}
+              {{ form.as_p }}
+              <button type="submit" class="btn btn-primary">Send offer</button>
+            </form>
+          </div>
+        </div>
+        <script>
+        (function () {
+          var hint = document.getElementById('price-hint');
+          var url = '{% url "price_suggestion" %}?pickup=' + encodeURIComponent('{{ load.pickup|escapejs }}') +
+            '&destination=' + encodeURIComponent('{{ load.destination|escapejs }}') +
+            '&tonnes=' + encodeURIComponent('{{ load.weight_tonnes|escapejs }}');
+          fetch(url, { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (d) {
+            if (!d.ok) { return; }
+            hint.textContent = 'Price guide for this route: $' + d.low + ' to $' + d.high +
+              ' (suggested $' + d.suggested + ') for about ' + d.distance_km + ' km. The shipper asks $' +
+              '{{ load.offered_price|escapejs }}' + '.';
+            hint.hidden = false;
+          });
+        })();
+        </script>
+        {% endif %}
+      {% elif not my_offer %}
+        <div class="alert alert-info">This load is no longer open for offers.</div>
+      {% endif %}
     {% endif %}
 
     {% if is_owner %}
-    <h3 class="h5">Offers received</h3>
+    <h2 class="h5">Offers received</h2>
     {% for offer in offers %}
     <div class="card mb-2">
-      <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <div>
-          <strong>${{ offer.price }}</strong> from {{ offer.transporter.username }}
-          <span class="badge bg-secondary">{{ offer.get_status_display }}</span><br>
-          {% if offer.truck %}<span class="small text-muted">{{ offer.truck }}</span><br>{% endif %}
-          {% if offer.message %}<span class="small">{{ offer.message }}</span>{% endif %}
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+          <div>
+            <strong>${{ offer.price }}</strong> from {{ offer.transporter.username }}
+            <span class="badge bg-secondary">{{ offer.get_status_display }}</span><br>
+            {% if offer.truck %}
+              <span class="small muted">{{ offer.truck }}{% if offer.truck.make %}, {{ offer.truck.make }}{% endif %}{% if offer.truck.year %} {{ offer.truck.year }}{% endif %}</span><br>
+            {% endif %}
+            {% if offer.message %}<span class="small">{{ offer.message }}</span>{% endif %}
+          </div>
         </div>
+        <ul class="timeline">
+          {% for e in offer.events.all %}
+          <li>{{ e.get_kind_display }}{% if e.price %} at ${{ e.price }}{% endif %} by {{ e.actor.username|default:"TruckLink" }}, {{ e.created_at|timesince }} ago</li>
+          {% endfor %}
+        </ul>
         {% if offer.status == 'pending' and load.status == 'open' %}
-        <span class="d-flex gap-1">
-          <form method="post" action="{% url 'respond_offer' offer.pk 'accept' %}">
-            {% csrf_token %}<button class="btn btn-sm btn-success">Accept</button>
+        <div class="d-flex flex-wrap gap-2 align-items-end">
+          <form method="post" action="{% url 'offer_action' offer.pk 'accept' %}">
+            {% csrf_token %}<button class="btn btn-success">Accept ${{ offer.price }}</button>
           </form>
-          <form method="post" action="{% url 'respond_offer' offer.pk 'decline' %}">
-            {% csrf_token %}<button class="btn btn-sm btn-outline-danger">Decline</button>
+          <form method="post" action="{% url 'offer_action' offer.pk 'counter' %}" class="d-flex gap-2 align-items-end">
+            {% csrf_token %}
+            <div>
+              <label class="small" for="counter-{{ offer.pk }}">Counter price (USD)</label>
+              <input id="counter-{{ offer.pk }}" type="number" name="price" min="1" step="0.01" required>
+            </div>
+            <button class="btn btn-outline-primary">Counter</button>
           </form>
-        </span>
+          <form method="post" action="{% url 'offer_action' offer.pk 'decline' %}">
+            {% csrf_token %}<button class="btn btn-outline-danger">Decline</button>
+          </form>
+        </div>
+        {% elif offer.status == 'countered' %}
+        <p class="muted mb-0">You countered. Waiting for the transporter to respond.</p>
         {% endif %}
       </div>
     </div>
     {% empty %}
-    <p>No offers yet.</p>
+    <div class="empty">No offers yet. Transporters who send an offer will appear here.</div>
     {% endfor %}
     {% endif %}
   </div>

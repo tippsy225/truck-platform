@@ -1,7 +1,10 @@
+from datetime import timedelta
 from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
+
+from trucks.models import Truck
 
 
 class Load(models.Model):
@@ -9,16 +12,38 @@ class Load(models.Model):
         ('open', 'Open'),
         ('booked', 'Booked'),
         ('delivered', 'Delivered'),
+        ('expired', 'Expired'),
     ]
+    CARGO_CHOICES = [
+        ('general', 'General cargo'),
+        ('bulk', 'Bulk'),
+        ('perishable', 'Perishable'),
+        ('fragile', 'Fragile'),
+        ('hazardous', 'Hazardous'),
+        ('livestock', 'Livestock'),
+    ]
+    URGENCY_CHOICES = [
+        ('standard', 'Standard (1 to 3 days)'),
+        ('urgent', 'Urgent (same day)'),
+        ('scheduled', 'Scheduled (fixed date)'),
+    ]
+    TRUCK_NEEDED_CHOICES = [('any', 'Any truck')] + Truck.TYPE_CHOICES
 
     shipper = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                                 related_name='loads', null=True, blank=True)
     title = models.CharField(max_length=100)
     pickup = models.CharField(max_length=100)
     destination = models.CharField(max_length=100)
+    cargo_type = models.CharField(max_length=20, choices=CARGO_CHOICES, default='general')
     weight_tonnes = models.DecimalField(max_digits=6, decimal_places=2)
+    truck_type_needed = models.CharField(max_length=20, choices=TRUCK_NEEDED_CHOICES, default='any')
     offered_price = models.DecimalField(max_digits=10, decimal_places=2)
+    urgency = models.CharField(max_length=20, choices=URGENCY_CHOICES, default='standard')
     pickup_date = models.DateField(null=True, blank=True)
+    description = models.TextField(blank=True, default='')
+    insured = models.BooleanField(default=False)
+    insurance_provider = models.CharField(max_length=100, blank=True, default='')
+    coverage_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -28,9 +53,12 @@ class Load(models.Model):
 
 class Offer(models.Model):
     STATUS_CHOICES = [
-        ('pending', 'Pending'),
+        ('pending', 'Awaiting shipper'),
+        ('countered', 'Awaiting transporter'),
         ('accepted', 'Accepted'),
         ('declined', 'Declined'),
+        ('withdrawn', 'Withdrawn'),
+        ('expired', 'Expired'),
     ]
 
     load = models.ForeignKey(Load, on_delete=models.CASCADE, related_name='offers')
@@ -41,6 +69,7 @@ class Offer(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     message = models.CharField(max_length=200, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    accepted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def _fee(self, percent):
@@ -68,8 +97,39 @@ class Offer(models.Model):
     def fee_paid(self):
         return self.shipper_paid and self.transporter_paid
 
+    @property
+    def pay_deadline(self):
+        if not self.accepted_at:
+            return None
+        hours = getattr(settings, 'PAYMENT_DEADLINE_HOURS', 24)
+        return self.accepted_at + timedelta(hours=hours)
+
     def __str__(self):
         return f"${self.price} by {self.transporter.username} for {self.load.title}"
+
+
+class OfferEvent(models.Model):
+    KIND_CHOICES = [
+        ('offer', 'Offered'),
+        ('counter', 'Countered'),
+        ('accept', 'Accepted'),
+        ('decline', 'Declined'),
+        ('withdraw', 'Withdrawn'),
+        ('expire', 'Expired'),
+    ]
+
+    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='events')
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                              null=True, blank=True, related_name='offer_events')
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES)
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.kind} on {self.offer}"
 
 
 class Payment(models.Model):
@@ -77,6 +137,7 @@ class Payment(models.Model):
         ('pending', 'Pending'),
         ('paid', 'Paid'),
         ('failed', 'Failed'),
+        ('refund_due', 'Refund due'),
     ]
     ROLE_CHOICES = [
         ('shipper', 'Shipper'),

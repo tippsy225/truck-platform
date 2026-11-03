@@ -2,13 +2,20 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from .forms import LoadForm, OfferForm, PaymentForm
-from .models import Load, Offer, Payment
+from accounts.notify import notify
+from trucks.models import Truck
+
+from .forms import CounterForm, LoadForm, OfferForm, PaymentForm
+from .models import Load, Offer, OfferEvent, Payment
+from .pricing import TOWNS
+from .services import deadline_hours, run_housekeeping
 
 DEMO_PREFIX = 'https://demo.local/payment/'
 
@@ -28,9 +35,36 @@ def _paynow():
                   settings.PAYNOW_RESULT_URL, settings.PAYNOW_RETURN_URL)
 
 
+def _load_url(load):
+    return reverse('load_detail', args=[load.pk])
+
+
 def load_list(request):
-    loads = Load.objects.filter(status='open').order_by('-created_at')
-    return render(request, 'loads/load_list.html', {'loads': loads})
+    run_housekeeping()
+    selected = {
+        'pickup': request.GET.get('pickup', ''),
+        'destination': request.GET.get('destination', ''),
+        'cargo': request.GET.get('cargo', ''),
+        'truck': request.GET.get('truck', ''),
+    }
+    loads = Load.objects.filter(status='open')
+    if selected['pickup']:
+        loads = loads.filter(pickup=selected['pickup'])
+    if selected['destination']:
+        loads = loads.filter(destination=selected['destination'])
+    if selected['cargo']:
+        loads = loads.filter(cargo_type=selected['cargo'])
+    if selected['truck']:
+        loads = loads.filter(Q(truck_type_needed='any') | Q(truck_type_needed=selected['truck']))
+    loads = sorted(loads, key=lambda l: (l.urgency != 'urgent', -l.created_at.timestamp()))
+    return render(request, 'loads/load_list.html', {
+        'loads': loads,
+        'selected': selected,
+        'filtered': any(selected.values()),
+        'towns': sorted(TOWNS),
+        'cargo_choices': Load.CARGO_CHOICES,
+        'truck_choices': Truck.TYPE_CHOICES,
+    })
 
 
 @login_required
@@ -55,32 +89,50 @@ def post_load(request):
 def my_loads(request):
     if _role(request.user) != 'shipper':
         return redirect('home')
+    run_housekeeping()
     loads = Load.objects.filter(shipper=request.user).order_by('-created_at')
     return render(request, 'loads/my_loads.html', {'loads': loads})
 
 
 @login_required
 def load_detail(request, pk):
+    run_housekeeping()
     load = get_object_or_404(Load, pk=pk)
     is_owner = load.shipper_id == request.user.id
+    role = _role(request.user)
+
+    my_offer = None
     form = None
+    has_trucks = False
+    if role == 'transporter' and not is_owner:
+        has_trucks = request.user.trucks.exists()
+        my_offer = (load.offers.filter(transporter=request.user)
+                    .exclude(status__in=['declined', 'withdrawn', 'expired']).first())
+        if load.status == 'open' and my_offer is None and has_trucks:
+            if request.method == 'POST':
+                form = OfferForm(request.POST, user=request.user, load=load)
+                if form.is_valid():
+                    offer = form.save(commit=False)
+                    offer.load = load
+                    offer.transporter = request.user
+                    offer.save()
+                    OfferEvent.objects.create(offer=offer, actor=request.user,
+                                              kind='offer', price=offer.price)
+                    notify(load.shipper,
+                           f'{request.user.username} offered ${offer.price} on "{load.title}".',
+                           _load_url(load))
+                    messages.success(request, 'Offer sent to the shipper.')
+                    return redirect('load_detail', pk=load.pk)
+            else:
+                form = OfferForm(user=request.user, load=load)
 
-    if _role(request.user) == 'transporter' and load.status == 'open':
-        if request.method == 'POST':
-            form = OfferForm(request.POST, user=request.user)
-            if form.is_valid():
-                offer = form.save(commit=False)
-                offer.load = load
-                offer.transporter = request.user
-                offer.save()
-                messages.success(request, 'Offer sent to the shipper.')
-                return redirect('my_offers')
-        else:
-            form = OfferForm(user=request.user)
+    offers = []
+    if is_owner:
+        offers = (load.offers.select_related('transporter', 'truck')
+                  .prefetch_related('events__actor').order_by('-created_at'))
 
-    offers = load.offers.select_related('transporter', 'truck').order_by('-created_at') if is_owner else []
-    accepted_offer = load.offers.filter(status='accepted').select_related('transporter').first()
-
+    accepted_offer = (load.offers.filter(status='accepted')
+                      .select_related('transporter', 'truck').first())
     my_role = None
     if accepted_offer:
         if is_owner:
@@ -88,7 +140,6 @@ def load_detail(request, pk):
         elif accepted_offer.transporter_id == request.user.id:
             my_role = 'transporter'
     is_party = my_role is not None
-
     fee_paid = bool(accepted_offer) and accepted_offer.fee_paid
     can_see_contacts = is_party and fee_paid
 
@@ -96,7 +147,9 @@ def load_detail(request, pk):
     my_fee = None
     pending_payment = None
     payment_form = None
+    deadline = None
     if is_party and not fee_paid:
+        deadline = accepted_offer.pay_deadline
         if my_role == 'shipper':
             my_paid = accepted_offer.shipper_paid
             my_fee = accepted_offer.shipper_fee
@@ -113,8 +166,11 @@ def load_detail(request, pk):
     return render(request, 'loads/load_detail.html', {
         'load': load,
         'form': form,
+        'has_trucks': has_trucks,
         'is_owner': is_owner,
+        'role': role,
         'offers': offers,
+        'my_offer': my_offer,
         'accepted_offer': accepted_offer,
         'is_party': is_party,
         'can_see_contacts': can_see_contacts,
@@ -122,31 +178,104 @@ def load_detail(request, pk):
         'my_fee': my_fee,
         'pending_payment': pending_payment,
         'payment_form': payment_form,
+        'deadline': deadline,
+        'can_deliver': is_owner and load.status == 'booked' and fee_paid,
     })
 
 
 @login_required
 @require_POST
-def respond_offer(request, pk, decision):
-    if decision not in ('accept', 'decline'):
+def offer_action(request, pk, action):
+    if action not in ('accept', 'decline', 'counter', 'withdraw'):
         raise Http404
-    offer = get_object_or_404(Offer, pk=pk, load__shipper=request.user)
+    offer = get_object_or_404(
+        Offer.objects.select_related('load', 'load__shipper', 'transporter'), pk=pk)
     load = offer.load
-    if offer.status != 'pending' or load.status != 'open':
+    user = request.user
+
+    if user.id == load.shipper_id:
+        side = 'shipper'
+        other = offer.transporter
+    elif user.id == offer.transporter_id:
+        side = 'transporter'
+        other = load.shipper
+    else:
+        raise Http404
+
+    url = _load_url(load)
+    your_turn = ((side == 'shipper' and offer.status == 'pending') or
+                 (side == 'transporter' and offer.status == 'countered'))
+    can_withdraw = side == 'transporter' and offer.status in ('pending', 'countered')
+    allowed = can_withdraw if action == 'withdraw' else your_turn
+    if load.status != 'open' or not allowed:
         messages.error(request, 'This offer can no longer be changed.')
         return redirect('load_detail', pk=load.pk)
 
-    if decision == 'accept':
+    if action == 'counter':
+        form = CounterForm(request.POST)
+        if not form.is_valid():
+            messages.error(request, 'Enter a valid counter price.')
+            return redirect('load_detail', pk=load.pk)
+        price = form.cleaned_data['price']
+        offer.price = price
+        offer.status = 'countered' if side == 'shipper' else 'pending'
+        offer.save()
+        OfferEvent.objects.create(offer=offer, actor=user, kind='counter', price=price)
+        notify(other, f'{user.username} countered with ${price} on "{load.title}". Your move.', url)
+        messages.success(request, 'Counter-offer sent.')
+
+    elif action == 'accept':
         with transaction.atomic():
             offer.status = 'accepted'
+            offer.accepted_at = timezone.now()
             offer.save()
             load.status = 'booked'
             load.save()
-            load.offers.exclude(pk=offer.pk).filter(status='pending').update(status='declined')
-        messages.success(request, 'Offer accepted. Both sides now pay a small platform fee to unlock contact details.')
-    else:
+            OfferEvent.objects.create(offer=offer, actor=user, kind='accept', price=offer.price)
+            rivals = load.offers.exclude(pk=offer.pk).filter(
+                status__in=['pending', 'countered']).select_related('transporter')
+            for rival in list(rivals):
+                rival.status = 'declined'
+                rival.save()
+                OfferEvent.objects.create(offer=rival, kind='decline', price=rival.price)
+                notify(rival.transporter,
+                       f'The load "{load.title}" was booked with another transporter.', url)
+        notify(other,
+               f'Agreed at ${offer.price} on "{load.title}". Pay your platform fee within '
+               f'{deadline_hours()} hours to unlock contact details.', url)
+        messages.success(request,
+                         f'Agreed at ${offer.price}. Both sides now pay a small platform fee '
+                         f'within {deadline_hours()} hours to unlock contact details.')
+
+    elif action == 'decline':
         offer.status = 'declined'
         offer.save()
+        OfferEvent.objects.create(offer=offer, actor=user, kind='decline', price=offer.price)
+        notify(other, f'{user.username} declined the offer on "{load.title}".', url)
+        messages.success(request, 'Offer declined.')
+
+    else:
+        offer.status = 'withdrawn'
+        offer.save()
+        OfferEvent.objects.create(offer=offer, actor=user, kind='withdraw', price=offer.price)
+        notify(other, f'{user.username} withdrew their offer on "{load.title}".', url)
+        messages.success(request, 'Offer withdrawn.')
+
+    return redirect('load_detail', pk=load.pk)
+
+
+@login_required
+@require_POST
+def mark_delivered(request, pk):
+    load = get_object_or_404(Load, pk=pk, shipper=request.user)
+    offer = load.offers.filter(status='accepted').select_related('transporter').first()
+    if load.status != 'booked' or not offer or not offer.fee_paid:
+        messages.error(request, 'A load can be marked as delivered once it is booked and both fees are paid.')
+        return redirect('load_detail', pk=load.pk)
+    load.status = 'delivered'
+    load.save()
+    notify(offer.transporter, f'"{load.title}" was marked as delivered. Well done.', _load_url(load))
+    messages.success(request, 'Load marked as delivered.')
     return redirect('load_detail', pk=load.pk)
 
 
@@ -221,9 +350,18 @@ def _mark_paid(request, payment):
     payment.status = 'paid'
     payment.paid_at = timezone.now()
     payment.save()
-    if payment.offer.fee_paid:
+    offer = payment.offer
+    load = offer.load
+    url = _load_url(load)
+    if offer.fee_paid:
+        text = f'Both platform fees are paid for "{load.title}". Contact details are unlocked.'
+        notify(offer.transporter, text, url)
+        notify(load.shipper, text, url)
         messages.success(request, 'Payment received. Both fees are paid, so contact details are now visible.')
     else:
+        other = offer.transporter if payment.payer_role == 'shipper' else load.shipper
+        notify(other, f'{payment.payer.username} paid their platform fee for "{load.title}". '
+                      f'Pay yours to unlock contact details.', url)
         messages.success(request, 'Payment received. Contact details appear when the other side pays their fee too.')
 
 
@@ -264,6 +402,7 @@ def check_payment(request, pk):
 def my_offers(request):
     if _role(request.user) != 'transporter':
         return redirect('home')
+    run_housekeeping()
     offers = (Offer.objects.filter(transporter=request.user)
               .select_related('load', 'load__shipper').order_by('-created_at'))
     return render(request, 'loads/my_offers.html', {'offers': offers})
