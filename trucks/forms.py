@@ -2,10 +2,14 @@ from datetime import date
 
 from django import forms
 
+from loads.pricing import town_choices
+
 from .models import Truck
 
 
 class TruckForm(forms.ModelForm):
+    current_location = forms.ChoiceField(choices=town_choices, label='Current location')
+
     class Meta:
         model = Truck
         fields = ['truck_type', 'capacity_tonnes', 'registration_number', 'make',

@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}My trucks{% endblock %}
+
+{% block content %}
+<div class="page-head d-flex justify-content-between align-items-end flex-wrap gap-2">
+  <div>
+    <h1>My trucks</h1>
+    <p class="muted mb-0">Keep insurance and roadworthy dates current. A truck with an expired document cannot bid.</p>
+  </div>
+  <a href="{% url 'add_truck' %}" class="btn btn-primary">Add a truck</a>
+</div>
+
+<div class="row g-3">
+  {% for t in trucks %}
+  <div class="col-12 col-md-6 col-xl-4">
+    <article class="card h-100">
+      <div class="card-body d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-start">
+          <h2 class="load-title">{{ t.get_truck_type_display }} {{ t.registration_number }}</h2>
+          <span class="cap">{{ t.capacity_tonnes }} t</span>
+        </div>
+        <p class="mb-2 muted">{% if t.make %}{{ t.make }} {{ t.vehicle_model }} {{ t.year|default:"" }}{% else %}Make and model not added{% endif %}</p>
+        <div class="chips">
+          {% if t.is_available %}<span class="badge bg-success">Available</span>{% else %}<span class="badge bg-secondary">Not available</span>{% endif %}
+          {% if t.insurance_expired %}<span class="chip chip-urgent">Insurance expired</span>
+          {% elif not t.insurance_expiry %}<span class="chip chip-warn">Insurance date missing</span>
+          {% else %}<span class="chip chip-ok">Insurance to {{ t.insurance_expiry|date:"d M Y" }}</span>{% endif %}
+          {% if t.roadworthy_expired %}<span class="chip chip-urgent">Roadworthy expired</span>
+          {% elif not t.roadworthy_expiry %}<span class="chip chip-warn">Roadworthy date missing</span>
+          {% else %}<span class="chip chip-ok">Roadworthy to {{ t.roadworthy_expiry|date:"d M Y" }}</span>{% endif %}
+        </div>
+        <p class="mb-3 small muted">Located in {{ t.current_location }}</p>
+        <div class="d-flex flex-wrap gap-2 mt-auto">
+          <a href="{% url 'edit_truck' t.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+          <form method="post" action="{% url 'toggle_truck' t.pk %}">
+            {% csrf_token %}<button class="btn btn-sm btn-outline-primary">{% if t.is_available %}Mark not available{% else %}Mark available{% endif %}</button>
+          </form>
+          <form method="post" action="{% url 'delete_truck' t.pk %}" onsubmit="return confirm('Delete this truck?');">
+            {% csrf_token %}<button class="btn btn-sm btn-outline-danger">Delete</button>
+          </form>
+        </div>
+      </div>
+    </article>
+  </div>
+  {% empty %}
+  <div class="col-12"><div class="empty">You have no trucks yet. <a href="{% url 'add_truck' %}">Add your first truck</a> to start bidding on loads.</div></div>
+  {% endfor %}
+</div>
+{% endblock %}

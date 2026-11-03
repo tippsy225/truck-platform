@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<style>
+  .attention { list-style:none; margin:0; padding:0; }
+  .attention li { display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:.8rem 1rem; border-bottom:1px solid var(--line); }
+  .attention li:last-child { border-bottom:0; }
+  .attention .bad { color:var(--brake); font-weight:600; }
+  .rows .row-item { display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:.75rem 1rem; border-bottom:1px solid var(--line); }
+  .rows .row-item:last-child { border-bottom:0; }
+</style>
+
+<div class="page-head">
+  <h1>Welcome back, {{ user.first_name|default:user.username }}</h1>
+  <p class="muted mb-0">
+    {% if role == 'shipper' %}Here is where your loads stand today.
+    {% elif role == 'transporter' %}Here is your fleet and your offers today.
+    {% else %}Your account has no role yet.{% endif %}
+  </p>
+</div>
+
+{% if role == 'shipper' %}
+  <div class="stats">
+    <div class="stat"><strong>{{ total }}</strong><span>Total loads</span></div>
+    <div class="stat"><strong>{{ open_count }}</strong><span>Open for offers</span></div>
+    <div class="stat"><strong>{{ booked_count }}</strong><span>Booked</span></div>
+    <div class="stat"><strong>{{ delivered_count }}</strong><span>Delivered</span></div>
+  </div>
+  <div class="d-flex flex-wrap gap-2 mb-4">
+    <a href="{% url 'post_load' %}" class="btn btn-primary">Post a load</a>
+    <a href="{% url 'truck_list' %}" class="btn btn-outline-primary">Find trucks</a>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-12 col-lg-6">
+      <h2 class="h5">Needs your attention</h2>
+      <div class="card">
+        <ul class="attention">
+          {% if waiting_offers %}
+          <li><span>{{ waiting_offers }} offer{{ waiting_offers|pluralize }} waiting for your answer</span><a href="{% url 'my_loads' %}" class="btn btn-sm btn-primary">Review</a></li>
+          {% endif %}
+          {% for offer in fees_to_pay %}
+          <li><span>Pay your platform fee for <strong>{{ offer.load.title }}</strong>{% if offer.pay_deadline %} by {{ offer.pay_deadline|date:"d M, H:i" }}{% endif %}</span><a href="{% url 'load_detail' offer.load.pk %}" class="btn btn-sm btn-warning">Pay</a></li>
+          {% endfor %}
+          {% if not waiting_offers and not fees_to_pay %}
+          <li class="muted">You are all caught up.</li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+    <div class="col-12 col-lg-6">
+      <h2 class="h5">Recent loads</h2>
+      <div class="card rows">
+        {% for l in recent %}
+        <div class="row-item">
+          <span><strong>{{ l.pickup }} to {{ l.destination }}</strong><br><span class="small muted">{{ l.title }}, {{ l.weight_tonnes }} t</span></span>
+          <span class="d-flex align-items-center gap-2"><span class="badge bg-secondary">{{ l.get_status_display }}</span><a href="{% url 'load_detail' l.pk %}">Open</a></span>
+        </div>
+        {% empty %}
+        <div class="empty m-3">You have not posted a load yet.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+{% elif role == 'transporter' %}
+  <div class="stats">
+    <div class="stat"><strong>{{ fleet }}</strong><span>Trucks in your fleet</span></div>
+    <div class="stat"><strong>{{ available }}</strong><span>Available now</span></div>
+    <div class="stat"><strong>{{ active_offers }}</strong><span>Active offers</span></div>
+    <div class="stat"><strong>{{ delivered_jobs }}</strong><span>Delivered jobs</span></div>
+  </div>
+  <div class="d-flex flex-wrap gap-2 mb-4">
+    <a href="{% url 'load_list' %}" class="btn btn-primary">Browse loads</a>
+    <a href="{% url 'add_truck' %}" class="btn btn-outline-primary">Add a truck</a>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-12 col-lg-6">
+      <h2 class="h5">Needs your attention</h2>
+      <div class="card">
+        <ul class="attention">
+          {% for offer in turn_offers %}
+          <li><span>The shipper countered on <strong>{{ offer.load.title }}</strong> at ${{ offer.price }}. Your move.</span><a href="{% url 'load_detail' offer.load.pk %}" class="btn btn-sm btn-primary">Respond</a></li>
+          {% endfor %}
+          {% for offer in fees_to_pay %}
+          <li><span>Pay your platform fee for <strong>{{ offer.load.title }}</strong>{% if offer.pay_deadline %} by {{ offer.pay_deadline|date:"d M, H:i" }}{% endif %}</span><a href="{% url 'load_detail' offer.load.pk %}" class="btn btn-sm btn-warning">Pay</a></li>
+          {% endfor %}
+          {% for a in alerts %}
+          <li><span class="{% if a.expired %}bad{% endif %}">{{ a.truck.registration_number }}: {{ a.text }}</span><a href="{% url 'edit_truck' a.truck.pk %}" class="btn btn-sm btn-outline-primary">Update</a></li>
+          {% endfor %}
+          {% if not turn_offers and not fees_to_pay and not alerts %}
+          <li class="muted">You are all caught up.</li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+    <div class="col-12 col-lg-6">
+      <h2 class="h5">Recent offers</h2>
+      <div class="card rows">
+        {% for o in recent_offers %}
+        <div class="row-item">
+          <span><strong>{{ o.load.pickup }} to {{ o.load.destination }}</strong><br><span class="small muted">{{ o.load.title }}, your price ${{ o.price }}</span></span>
+          <span class="d-flex align-items-center gap-2"><span class="badge bg-secondary">{{ o.get_status_display }}</span><a href="{% url 'load_detail' o.load.pk %}">Open</a></span>
+        </div>
+        {% empty %}
+        <div class="empty m-3">You have not made an offer yet.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+{% else %}
+  <div class="empty">This account has no shipper or transporter role. Register a new account, or add a profile in the admin.</div>
+{% endif %}
+{% endblock %}

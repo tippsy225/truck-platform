@@ -22,3 +22,17 @@ class RegisterForm(UserCreationForm):
                 phone=self.cleaned_data['phone'],
             )
         return user
+
+
+class AccountForm(forms.Form):
+    first_name = forms.CharField(max_length=150, required=False)
+    last_name = forms.CharField(max_length=150, required=False)
+    email = forms.EmailField(required=False)
+    phone = forms.CharField(max_length=20, required=False, label='Phone number')
+
+    def clean_phone(self):
+        phone = self.cleaned_data['phone'].replace(' ', '')
+        digits = phone.lstrip('+')
+        if phone and not (digits.isdigit() and 10 <= len(digits) <= 13):
+            raise forms.ValidationError('Enter a valid phone number, like 0771234567.')
+        return phone

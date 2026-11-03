@@ -152,6 +152,7 @@
       </a>
       <nav class="navlinks" aria-label="Main">
         {% if user.is_authenticated %}
+          <a class="navlink" href="{% url 'dashboard' %}">Dashboard</a>
           {% if user.profile.role == 'shipper' %}
             <a class="navlink" href="{% url 'truck_list' %}">Available trucks</a>
             <a class="navlink" href="{% url 'post_load' %}">Post a load</a>
@@ -159,13 +160,20 @@
           {% elif user.profile.role == 'transporter' %}
             <a class="navlink" href="{% url 'load_list' %}">Available loads</a>
             <a class="navlink" href="{% url 'my_offers' %}">My offers</a>
-            <a class="navlink" href="{% url 'add_truck' %}">Register a truck</a>
+            <a class="navlink" href="{% url 'my_trucks' %}">My trucks</a>
           {% else %}
             <a class="navlink" href="{% url 'load_list' %}">Loads</a>
             <a class="navlink" href="{% url 'truck_list' %}">Trucks</a>
           {% endif %}
           <a class="navlink" href="{% url 'notifications' %}">Notifications{% if unread %}<span class="count">{{ unread }}</span>{% endif %}</a>
+          <a class="navlink" href="{% url 'account' %}">Account</a>
           <span class="userchip">{{ user.username }}{% if user.profile %} ({{ user.profile.role|title }}){% endif %}</span>
+          {% if user.profile.both_roles %}
+          <form method="post" action="{% url 'switch_role' %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-warning">Switch to {% if user.profile.role == 'shipper' %}transporter{% else %}shipper{% endif %}</button>
+          </form>
+          {% endif %}
           <form method="post" action="{% url 'logout' %}" class="d-inline">
             {% csrf_token %}
             <button type="submit" class="btn btn-sm btn-nav">Log out</button>

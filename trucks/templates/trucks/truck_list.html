@@ -7,6 +7,32 @@
   <h1>Available trucks</h1>
   <p class="muted mb-0">Trucks ready to take a load. Post a load and transporters will send you offers.</p>
 </div>
+
+<form method="get" class="filters">
+  <div>
+    <label for="f-type">Truck type</label>
+    <select id="f-type" name="type">
+      <option value="">All types</option>
+      {% for value, label in type_choices %}<option value="{{ value }}" {% if selected.type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="f-loc">Located in</label>
+    <select id="f-loc" name="location">
+      <option value="">Any town</option>
+      {% for t in towns %}<option value="{{ t }}" {% if selected.location == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="f-min">Minimum capacity (t)</label>
+    <input id="f-min" type="number" name="min" min="0" step="0.5" value="{{ selected.min }}" placeholder="Any">
+  </div>
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary flex-grow-1">Search</button>
+    {% if filtered %}<a href="{% url 'truck_list' %}" class="btn btn-outline-primary">Clear</a>{% endif %}
+  </div>
+</form>
+
 <div class="row g-3">
   {% for truck in trucks %}
   <div class="col-12 col-md-6 col-xl-4">
@@ -17,16 +43,25 @@
           <span class="cap">{{ truck.capacity_tonnes }} t</span>
         </div>
         <div class="route"><span class="town">{{ truck.current_location }}</span></div>
+        <div class="chips">
+          {% if truck.make %}<span class="chip">{{ truck.make }} {{ truck.vehicle_model }}</span>{% endif %}
+          {% if truck.year %}<span class="chip">{{ truck.year }}</span>{% endif %}
+          {% if truck.axle_configuration %}<span class="chip">{{ truck.axle_configuration }}</span>{% endif %}
+          {% if truck.insurance_expiry and truck.roadworthy_expiry %}<span class="chip chip-ok">Document dates on file</span>{% else %}<span class="chip chip-warn">Document dates missing</span>{% endif %}
+        </div>
         <dl class="facts">
           <div><dt>Available from</dt><dd>{{ truck.available_from|date:"d M Y"|default:"Now" }}</dd></div>
           <div><dt>Transporter</dt><dd>{{ truck.owner.username }}</dd></div>
+          {% if truck.volume_cbm %}<div><dt>Volume</dt><dd>{{ truck.volume_cbm }} CBM</dd></div>{% endif %}
         </dl>
-        <p class="small muted mb-0">Contact details unlock after booking.</p>
+        <p class="small muted mb-0">Document dates are entered by the transporter and are not yet verified. Contact details unlock after booking.</p>
       </div>
     </article>
   </div>
   {% empty %}
-  <div class="col-12"><div class="empty">No trucks available yet. When a transporter registers one, it will appear here.</div></div>
+  <div class="col-12"><div class="empty">
+    {% if filtered %}No trucks match these filters. Try removing one.{% else %}No trucks available yet. When a transporter registers one, it will appear here.{% endif %}
+  </div></div>
   {% endfor %}
 </div>
 {% endblock %}

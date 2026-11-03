@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}My account{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>My account</h1>
+  <p class="muted mb-0">Your phone number is shown to the other side only after both platform fees are paid.</p>
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-lg-6">
+    <form method="post" class="card p-4">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit" class="btn btn-primary">Save details</button>
+    </form>
+  </div>
+  <div class="col-12 col-lg-6">
+    <div class="card p-4">
+      <h2 class="h5">Your role</h2>
+      {% if profile %}
+        <p>You are currently using TruckLink as a <strong>{{ profile.role }}</strong>.</p>
+        {% if profile.both_roles %}
+          <p class="muted mb-0">You can do both. Use the switch button in the top bar to change between shipper and transporter.</p>
+        {% else %}
+          <p class="muted">Some people have goods to move and trucks too. Turn this on to use both roles with one account.</p>
+          <form method="post" action="{% url 'enable_both_roles' %}">
+            {% csrf_token %}
+            <button class="btn btn-outline-primary">I am also a {% if profile.role == 'shipper' %}transporter{% else %}shipper{% endif %}</button>
+          </form>
+        {% endif %}
+      {% else %}
+        <p class="muted mb-0">This account has no role.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
