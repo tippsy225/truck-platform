@@ -1,0 +1,5 @@
+<span style="display:inline-flex;flex-wrap:wrap;gap:.35rem;align-items:center;">
+  <a href="{% url 'public_profile' person.username %}">{{ person.username }}</a>
+  {% if verified %}<span class="chip chip-ok">Verified</span>{% else %}<span class="chip">Not verified</span>{% endif %}
+  {% if count %}<span class="chip">{{ avg }} out of 5 ({{ count }})</span>{% else %}<span class="chip">No ratings yet</span>{% endif %}
+</span>

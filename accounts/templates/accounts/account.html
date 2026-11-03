@@ -17,6 +17,23 @@
     </form>
   </div>
   <div class="col-12 col-lg-6">
+    <div class="card p-4 mb-3">
+      <h2 class="h5">Identity verification</h2>
+      {% if profile.is_verified %}
+        <p><span class="chip chip-ok">Verified</span></p>
+        <p class="muted mb-0">Your badge shows next to your name on loads, trucks and offers.</p>
+      {% elif profile.kyc_status == 'pending' %}
+        <p><span class="badge bg-secondary">Pending review</span></p>
+        <a href="{% url 'kyc' %}" class="btn btn-outline-primary">View status</a>
+      {% elif profile.kyc_status == 'rejected' %}
+        <p><span class="chip chip-urgent">Rejected</span></p>
+        <a href="{% url 'kyc' %}" class="btn btn-warning">See why and submit again</a>
+      {% else %}
+        <p class="muted">Verified users are trusted more by shippers and transporters.</p>
+        <a href="{% url 'kyc' %}" class="btn btn-warning">Verify my identity</a>
+      {% endif %}
+      {% if profile %}<p class="mt-3 mb-0"><a href="{% url 'public_profile' user.username %}">See how others see my profile</a></p>{% endif %}
+    </div>
     <div class="card p-4">
       <h2 class="h5">Your role</h2>
       {% if profile %}

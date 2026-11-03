@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ person.username }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ person.username }}</h1>
+  <div class="chips mt-2">
+    {% if profile %}<span class="chip">{{ profile.role|title }}</span>{% endif %}
+    {% if verified %}<span class="chip chip-ok">Verified</span>{% else %}<span class="chip">Not verified</span>{% endif %}
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat"><strong>{% if avg %}{{ avg }}{% else %}New{% endif %}</strong><span>Average rating out of 5</span></div>
+  <div class="stat"><strong>{{ count }}</strong><span>Rating{{ count|pluralize }}</span></div>
+  <div class="stat"><strong>{{ jobs }}</strong><span>Delivered job{{ jobs|pluralize }}</span></div>
+  <div class="stat"><strong>{{ person.date_joined|date:"M Y" }}</strong><span>Member since</span></div>
+</div>
+
+<h2 class="h5">Reviews</h2>
+<div class="card">
+  {% for r in reviews %}
+  <div class="note">
+    <strong>{{ r.stars }} out of 5</strong> from {{ r.reviewer.username }} on "{{ r.offer.load.title }}"
+    {% if r.comment %}<div>{{ r.comment }}</div>{% endif %}
+    <div class="small muted">{{ r.created_at|timesince }} ago</div>
+  </div>
+  {% empty %}
+  <div class="empty m-3">No reviews to show yet. Reviews appear once both sides of a job have rated each other.</div>
+  {% endfor %}
+</div>
+{% endblock %}

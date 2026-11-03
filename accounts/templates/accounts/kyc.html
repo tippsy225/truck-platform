@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}Verify your identity{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Verify your identity</h1>
+  <p class="muted mb-0">Verified users get a badge and are trusted more. Your documents are visible only to you and TruckLink's review staff.</p>
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-lg-4">
+    <div class="card p-4">
+      <h2 class="h5">Your status</h2>
+      {% if not latest %}
+        <p class="mb-0">You have not submitted anything yet.</p>
+      {% elif latest.status == 'pending' %}
+        <p><span class="badge bg-secondary">Pending review</span></p>
+        <p class="muted mb-0">Submitted {{ latest.created_at|timesince }} ago. A reviewer will check it soon.</p>
+      {% elif latest.status == 'approved' %}
+        <p><span class="chip chip-ok">Verified</span></p>
+        <p class="muted mb-0">Your identity was approved. The badge shows next to your name.</p>
+      {% else %}
+        <p><span class="chip chip-urgent">Rejected</span></p>
+        <p class="mb-0">{{ latest.review_note|default:"The reviewer could not approve this submission." }} You can submit again.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-8">
+    {% if can_submit and form %}
+    <form method="post" enctype="multipart/form-data" class="card p-4">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit" class="btn btn-primary">Submit for verification</button>
+    </form>
+    {% elif latest and latest.status == 'pending' %}
+    <div class="empty">Your submission is waiting for review. You cannot submit again until it is reviewed.</div>
+    {% elif latest and latest.status == 'approved' %}
+    <div class="empty">You are verified. Nothing more to do.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

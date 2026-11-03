@@ -12,4 +12,8 @@ urlpatterns = [
     path('enable-both-roles/', views.enable_both_roles, name='enable_both_roles'),
     path('switch-role/', views.switch_role, name='switch_role'),
     path('notifications/', views.notifications, name='notifications'),
+    path('verify/', views.kyc, name='kyc'),
+    path('verify/<int:pk>/<str:kind>/', views.kyc_document, name='kyc_document'),
+    path('review/<int:offer_pk>/', views.submit_review, name='submit_review'),
+    path('people/<str:username>/', views.public_profile, name='public_profile'),
 ]

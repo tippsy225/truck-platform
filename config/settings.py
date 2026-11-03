@@ -154,3 +154,4 @@ PRICING = {
     'minimum': 50.0,
     'range': 0.15,
 }
+PRIVATE_MEDIA_ROOT = BASE_DIR / 'private_media'

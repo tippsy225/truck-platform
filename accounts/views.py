@@ -3,7 +3,11 @@ from datetime import timedelta
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect, render
+from django.contrib.auth.models import User
+from django.db.models import Q
+from django.http import FileResponse, Http404
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -11,7 +15,9 @@ from loads.models import Load, Offer
 from loads.services import run_housekeeping
 from trucks.models import Truck
 
-from .forms import AccountForm, RegisterForm
+from .forms import AccountForm, KycForm, RegisterForm, ReviewForm
+from .models import KycSubmission, Review, rating_summary, visible_reviews
+from .notify import notify
 
 
 def home(request):
@@ -141,3 +147,98 @@ def notifications(request):
     items = list(request.user.notifications.all()[:50])
     request.user.notifications.filter(is_read=False).update(is_read=True)
     return render(request, 'accounts/notifications.html', {'items': items})
+
+
+@login_required
+def kyc(request):
+    latest = request.user.kyc_submissions.first()
+    can_submit = latest is None or latest.status == 'rejected'
+    form = None
+    if can_submit:
+        if request.method == 'POST':
+            form = KycForm(request.POST, request.FILES)
+            if form.is_valid():
+                submission = form.save(commit=False)
+                submission.user = request.user
+                submission.save()
+                for staff in User.objects.filter(is_staff=True):
+                    notify(staff, f'New identity submission from {request.user.username}.',
+                           '/admin/accounts/kycsubmission/')
+                messages.success(request, 'Submitted. A reviewer will check your documents soon.')
+                return redirect('kyc')
+        else:
+            form = KycForm()
+    return render(request, 'accounts/kyc.html', {
+        'form': form, 'latest': latest, 'can_submit': can_submit})
+
+
+@login_required
+def kyc_document(request, pk, kind):
+    if kind not in ('front', 'back', 'selfie'):
+        raise Http404
+    submission = get_object_or_404(KycSubmission, pk=pk)
+    if not (request.user.is_staff or submission.user_id == request.user.id):
+        raise Http404
+    stored = getattr(submission, kind)
+    if not stored:
+        raise Http404
+    response = FileResponse(stored.open('rb'))
+    response['Content-Disposition'] = 'inline'
+    response['X-Content-Type-Options'] = 'nosniff'
+    response['Cache-Control'] = 'private, no-store'
+    return response
+
+
+@login_required
+@require_POST
+def submit_review(request, offer_pk):
+    offer = get_object_or_404(
+        Offer.objects.select_related('load', 'load__shipper', 'transporter'),
+        pk=offer_pk, status='accepted')
+    load = offer.load
+    if load.status != 'delivered':
+        messages.error(request, 'You can leave a rating once the load is delivered.')
+        return redirect('load_detail', pk=load.pk)
+
+    if request.user.id == load.shipper_id:
+        reviewee = offer.transporter
+    elif request.user.id == offer.transporter_id:
+        reviewee = load.shipper
+    else:
+        raise Http404
+
+    if Review.objects.filter(offer=offer, reviewer=request.user).exists():
+        messages.info(request, 'You have already rated this job.')
+        return redirect('load_detail', pk=load.pk)
+
+    form = ReviewForm(request.POST)
+    if form.is_valid():
+        stars = form.cleaned_data['stars']
+        Review.objects.create(offer=offer, reviewer=request.user, reviewee=reviewee,
+                              stars=stars, comment=form.cleaned_data['comment'].strip())
+        notify(reviewee, f'{request.user.username} rated you on "{load.title}". '
+                         f'Rate them too to see what they said.',
+               reverse('load_detail', args=[load.pk]))
+        messages.success(request, 'Thank you. Your rating was saved.')
+    else:
+        messages.error(request, 'Choose a rating from 1 to 5.')
+    return redirect('load_detail', pk=load.pk)
+
+
+@login_required
+def public_profile(request, username):
+    person = get_object_or_404(User, username=username)
+    profile = getattr(person, 'profile', None)
+    avg, count = rating_summary(person)
+    reviews = visible_reviews(person).select_related('reviewer', 'offer__load')[:20]
+    jobs = (Offer.objects.filter(status='accepted', load__status='delivered')
+            .filter(Q(transporter=person) | Q(load__shipper=person)).count())
+    return render(request, 'accounts/profile.html', {
+        'person': person,
+        'profile': profile,
+        'verified': bool(profile and profile.is_verified),
+        'avg': round(avg, 1) if avg else None,
+        'count': count,
+        'reviews': reviews,
+        'jobs': jobs,
+    })

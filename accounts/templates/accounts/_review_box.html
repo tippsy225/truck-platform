@@ -1,0 +1,22 @@
+{% if show %}
+<div class="card mb-3">
+  <div class="card-body">
+    <h2 class="h5">Rate {{ other.username }}</h2>
+    {% if mine %}
+      <p class="mb-1">You rated {{ other.username }} {{ mine.stars }} out of 5{% if mine.comment %}: {{ mine.comment }}{% endif %}</p>
+      {% if theirs %}
+        <p class="mb-0">{{ other.username }} rated you {{ theirs.stars }} out of 5{% if theirs.comment %}: {{ theirs.comment }}{% endif %}</p>
+      {% else %}
+        <p class="muted small mb-0">{{ other.username }}'s rating of you appears once they have rated you too.</p>
+      {% endif %}
+    {% else %}
+      <p class="muted small">Ratings help others decide who to trust. Both ratings are revealed once you have both rated.</p>
+      <form method="post" action="{% url 'submit_review' offer.pk %}">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button class="btn btn-primary">Save my rating</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

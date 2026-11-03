@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load trust_tags %}
 
 {% block title %}Available trucks{% endblock %}
 
@@ -51,9 +52,9 @@
         </div>
         <dl class="facts">
           <div><dt>Available from</dt><dd>{{ truck.available_from|date:"d M Y"|default:"Now" }}</dd></div>
-          <div><dt>Transporter</dt><dd>{{ truck.owner.username }}</dd></div>
           {% if truck.volume_cbm %}<div><dt>Volume</dt><dd>{{ truck.volume_cbm }} CBM</dd></div>{% endif %}
         </dl>
+        <p class="mb-2 small">Transporter: {% trust_chip truck.owner %}</p>
         <p class="small muted mb-0">Document dates are entered by the transporter and are not yet verified. Contact details unlock after booking.</p>
       </div>
     </article>

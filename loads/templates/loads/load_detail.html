@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load trust_tags %}
 
 {% block title %}{{ load.title }}{% endblock %}
 
@@ -12,6 +13,7 @@
           <h1 class="h3" style="margin-top:0;">{{ load.title }}</h1>
           <span class="badge bg-success">{{ load.get_status_display }}</span>
         </div>
+        {% if load.shipper %}<p class="mb-2 small muted">Posted by {% trust_chip load.shipper %}</p>{% endif %}
         <div class="chips mt-2">
           {% if load.urgency == 'urgent' %}<span class="chip chip-urgent">Urgent</span>{% endif %}
           <span class="chip">{{ load.get_cargo_type_display }}</span>
@@ -41,6 +43,8 @@
   </div>
 
   <div class="col-12 col-lg-7">
+
+    {% review_box load %}
 
     {% if accepted_offer and is_party %}
       {% if can_see_contacts %}
@@ -164,7 +168,7 @@
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
           <div>
-            <strong>${{ offer.price }}</strong> from {{ offer.transporter.username }}
+            <strong>${{ offer.price }}</strong> from {% trust_chip offer.transporter %}
             <span class="badge bg-secondary">{{ offer.get_status_display }}</span><br>
             {% if offer.truck %}
               <span class="small muted">{{ offer.truck }}{% if offer.truck.make %}, {{ offer.truck.make }}{% endif %}{% if offer.truck.year %} {{ offer.truck.year }}{% endif %}</span><br>
