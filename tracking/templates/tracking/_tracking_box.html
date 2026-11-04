@@ -1,0 +1,17 @@
+{% if show %}
+<div class="card mb-3">
+  <div class="card-body">
+    <h2 class="h5">Truck tracking</h2>
+    {% if active %}
+      <p class="mb-2"><span class="chip chip-ok">Sharing live</span></p>
+      <a class="btn btn-primary" href="{% url 'track_page' offer.pk %}">Open the live map</a>
+    {% elif is_transporter %}
+      <p class="muted small mb-2">Let the shipper follow your truck on a map while this job runs. It is your choice, and you can stop at any time.</p>
+      <a class="btn btn-outline-primary" href="{% url 'track_page' offer.pk %}">Set up tracking</a>
+    {% else %}
+      <p class="muted small mb-2">The transporter has not started sharing the truck's location. You can ask them to.</p>
+      <a class="btn btn-outline-primary" href="{% url 'track_page' offer.pk %}">Open tracking</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

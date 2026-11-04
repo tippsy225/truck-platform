@@ -1,5 +1,5 @@
 from django.urls import path
-from . import price_api, views
+from . import live, price_api, views
 
 urlpatterns = [
     path('', views.load_list, name='load_list'),
@@ -11,5 +11,6 @@ urlpatterns = [
     path('payments/<int:pk>/check/', views.check_payment, name='check_payment'),
     path('suggest-price/', price_api.price_suggestion, name='price_suggestion'),
     path('<int:pk>/deliver/', views.mark_delivered, name='mark_delivered'),
+    path('<int:pk>/live/', live.load_live, name='load_live'),
     path('<int:pk>/', views.load_detail, name='load_detail'),
 ]

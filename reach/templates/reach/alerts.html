@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Phone alerts{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Phone alerts</h1>
+  <p class="muted mb-0">Get a WhatsApp or SMS message when something needs your attention. You can turn this off at any time.</p>
+</div>
+
+{% if backend == 'outbox' %}
+<div class="alert alert-warning">No WhatsApp or SMS provider is connected yet, so alerts are recorded in the list below instead of being sent. This lets you test the whole flow.</div>
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-12 col-lg-6">
+    <form method="post" class="card p-4">
+      {% csrf_token %}
+      <p class="fw-semibold mb-2">Send alerts by</p>
+      {% for value, label in channels %}
+      <label class="d-flex align-items-center gap-2 mb-2" style="font-weight:500;">
+        <input type="radio" name="channel" value="{{ value }}" style="width:auto;" {% if pref.channel == value %}checked{% endif %}> {{ label }}
+      </label>
+      {% endfor %}
+      <p class="mt-3">
+        <label for="alert-phone">Mobile number</label>
+        <input id="alert-phone" type="text" name="phone" value="{{ phone }}" placeholder="0771234567">
+      </p>
+      <p class="small muted">We only message you about your own loads, offers, trips and payments. Messages never include phone numbers or documents.</p>
+      <div class="d-flex flex-wrap gap-2">
+        <button name="action" value="save" class="btn btn-primary">Save</button>
+        <button name="action" value="test" class="btn btn-outline-primary">Save and send a test</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <h2 class="h5">Recent messages</h2>
+    <div class="card">
+      {% for m in recent %}
+      <div class="note">
+        {{ m.body }}
+        <div class="small muted">{{ m.get_channel_display|default:m.channel }} to {{ m.phone }}, {{ m.created_at|timesince }} ago, <strong>{{ m.get_status_display }}</strong>{% if m.detail %} ({{ m.detail }}){% endif %}</div>
+      </div>
+      {% empty %}
+      <div class="empty m-3">No messages yet. Turn alerts on and send a test.</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

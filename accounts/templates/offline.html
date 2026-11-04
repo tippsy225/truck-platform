@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>You are offline</title>
+  <style>
+    body { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; background:#EEF2F1; color:#1E2A32;
+           display:grid; place-items:center; min-height:100vh; margin:0; padding:1.5rem; text-align:center; }
+    .box { max-width:26rem; }
+    h1 { margin:0 0 .5rem; font-size:1.8rem; }
+    p { color:#566870; line-height:1.5; }
+    button { border:0; border-radius:8px; padding:.7rem 1.2rem; background:#1C6B4A; color:#fff; font-weight:600; font-size:1rem; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>You are offline</h1>
+    <p>TruckLink needs an internet connection to show loads, offers and payments. Check your connection and try again.</p>
+    <button type="button" onclick="location.reload()">Try again</button>
+  </div>
+</body>
+</html>

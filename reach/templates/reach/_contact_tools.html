@@ -1,0 +1,22 @@
+{% if show %}
+<div class="card mb-3">
+  <div class="card-body">
+    {% if share_url %}
+      <h2 class="h5">Spread the word</h2>
+      <p class="muted small">Send this load to transporters you know on WhatsApp. They log in to TruckLink to send an offer.</p>
+      <a class="btn btn-success" href="{{ share_url }}" target="_blank" rel="noopener">Share on WhatsApp</a>
+    {% else %}
+      <h2 class="h5">Contact {{ other.username }}</h2>
+      {% if phone %}
+        <p class="mb-2">{{ phone }}</p>
+        <div class="d-flex flex-wrap gap-2">
+          {% if wa_url %}<a class="btn btn-success" href="{{ wa_url }}" target="_blank" rel="noopener">Message on WhatsApp</a>{% endif %}
+          {% if tel_url %}<a class="btn btn-outline-primary" href="{{ tel_url }}">Call</a>{% endif %}
+        </div>
+      {% else %}
+        <p class="muted mb-0">They have not added a phone number yet.</p>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endif %}

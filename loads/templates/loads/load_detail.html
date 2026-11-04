@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load trust_tags wallet_tags %}
+{% load trust_tags wallet_tags reach_tags tracking_tags %}
 
 {% block title %}{{ load.title }}{% endblock %}
 
@@ -46,7 +46,7 @@
 
     {% review_box load %}
     {% escrow_box load %}
-    {% dispute_box load %}
+      {% tracking_box load %}
 
     {% if accepted_offer and is_party %}
       {% if can_see_contacts %}

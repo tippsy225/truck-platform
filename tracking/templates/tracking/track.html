@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+
+{% block title %}Truck tracking{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  #map { height: 440px; border-radius: 12px; border: 1px solid var(--line); }
+  .status-line { font-weight: 600; }
+  .status-line.bad { color: var(--brake); }
+</style>
+
+<div class="page-head">
+  <h1>Truck tracking</h1>
+  <p class="muted mb-0">{{ load.title }}, {{ load.pickup }} to {{ load.destination }}. Booked at ${{ offer.price }}. <a href="{% url 'load_detail' load.pk %}">Back to the load</a></p>
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-lg-8">
+    <div id="map" role="img" aria-label="Map showing the route and the truck position"></div>
+    <label class="d-flex align-items-center gap-2 mt-2 small" style="font-weight:500;">
+      <input type="checkbox" id="follow" checked style="width:auto;"> Keep the truck in view
+    </label>
+  </div>
+
+  <div class="col-12 col-lg-4">
+    <div class="card p-4 mb-3" aria-live="polite">
+      <h2 class="h5">Status</h2>
+      <p class="status-line mb-1" id="status">Loading...</p>
+      <p class="small muted mb-0" id="detail"></p>
+    </div>
+
+    {% if side == 'transporter' %}
+    <div class="card p-4 mb-3">
+      <h2 class="h5">Your location sharing</h2>
+      {% if not ready %}
+        <p class="muted mb-0">Tracking can start once the job is booked and both platform fees are paid.</p>
+      {% elif active %}
+        <p class="mb-2" id="share-status">Starting...</p>
+        <p class="small muted">Keep this page open and your screen on. Your phone may pause sharing if the screen locks.</p>
+        <form method="post" action="{% url 'stop_tracking' offer.pk %}">
+          {% csrf_token %}
+          <button class="btn btn-outline-danger">Stop sharing</button>
+        </form>
+      {% else %}
+        <p class="small">Sharing lets {{ load.shipper.username }} see your truck on a map until the job is delivered or you stop. Nobody else on TruckLink can see it.</p>
+        <form method="post" action="{% url 'start_tracking' offer.pk %}">
+          {% csrf_token %}
+          <label class="d-flex align-items-start gap-2 mb-3" style="font-weight:500;">
+            <input type="checkbox" name="consent" required style="width:auto;margin-top:.3rem;">
+            <span>I agree to share this truck's location with the shipper for this job.</span>
+          </label>
+          <button class="btn btn-primary">Start sharing my location</button>
+        </form>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="card p-4 mb-3">
+      <h2 class="h5">Following the truck</h2>
+      {% if not ready %}
+        <p class="muted mb-0">Tracking is available once the job is booked and both platform fees are paid.</p>
+      {% elif active %}
+        <p class="mb-0">The transporter is sharing the truck's location. The map updates every few seconds.</p>
+      {% else %}
+        <p class="muted">The transporter has not started sharing yet. Sharing is their choice.</p>
+        <form method="post" action="{% url 'ask_tracking' offer.pk %}">
+          {% csrf_token %}
+          <button class="btn btn-outline-primary">Ask the transporter to share</button>
+        </form>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="card p-4">
+      <h2 class="h5">Privacy</h2>
+      <p class="small muted mb-0">Only the two people on this job, and TruckLink staff reviewing a dispute, can see the location. Sharing stops by itself when the job is delivered. Location history is deleted after {{ retention }} days.</p>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{{ config|json_script:"track-config" }}
+<script>
+(function () {
+  var cfg = JSON.parse(document.getElementById('track-config').textContent);
+  var statusEl = document.getElementById('status');
+  var detailEl = document.getElementById('detail');
+  var follow = document.getElementById('follow');
+
+  function setStatus(text, bad) {
+    statusEl.textContent = text;
+    statusEl.className = 'status-line' + (bad ? ' bad' : '');
+  }
+
+  if (typeof L === 'undefined') {
+    setStatus('The map could not load. Check your internet connection and refresh.', true);
+    return;
+  }
+
+  var map = L.map('map').setView([-19.0, 29.8], 6);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
+
+  var bounds = [];
+  function town(point, color) {
+    if (!point) { return; }
+    var label = document.createElement('span');
+    label.textContent = point[2];
+    L.circleMarker([point[0], point[1]], { radius: 8, color: '#1E2A32', weight: 2, fillColor: color, fillOpacity: 1 })
+      .addTo(map).bindTooltip(label, { permanent: true, direction: 'top', offset: [0, -8] });
+    bounds.push([point[0], point[1]]);
+  }
+  town(cfg.pickup, '#1C6B4A');
+  town(cfg.destination, '#C93A2B');
+  if (cfg.pickup && cfg.destination) {
+    L.polyline([[cfg.pickup[0], cfg.pickup[1]], [cfg.destination[0], cfg.destination[1]]],
+      { color: '#9FB2AC', weight: 3, dashArray: '6 8' }).addTo(map);
+  }
+  if (bounds.length) { map.fitBounds(bounds, { padding: [50, 50] }); }
+
+  var trail = L.polyline([], { color: '#1C6B4A', weight: 4 }).addTo(map);
+  var truck = null;
+  var halo = null;
+  var fitted = false;
+  var wasActive = cfg.active;
+
+  function ago(seconds) {
+    if (seconds < 60) { return seconds + ' second' + (seconds === 1 ? '' : 's') + ' ago'; }
+    var m = Math.round(seconds / 60);
+    return m + ' minute' + (m === 1 ? '' : 's') + ' ago';
+  }
+
+  function clearTruck() {
+    if (truck) { map.removeLayer(truck); truck = null; }
+    if (halo) { map.removeLayer(halo); halo = null; }
+    trail.setLatLngs([]);
+  }
+
+  function render(d) {
+    if (!d.active) {
+      clearTruck();
+      setStatus(wasActive ? 'Tracking has ended.' : 'Tracking is not active.', false);
+      detailEl.textContent = d.status === 'delivered' ? 'The load was delivered.' : '';
+      return;
+    }
+    wasActive = true;
+    if (!d.last) {
+      setStatus('Waiting for the first location...', false);
+      detailEl.textContent = 'The transporter has started sharing. The first position can take a few seconds.';
+      return;
+    }
+    var pos = [d.last[0], d.last[1]];
+    if (truck) { truck.setLatLng(pos); }
+    else {
+      truck = L.circleMarker(pos, { radius: 10, color: '#1E2A32', weight: 3, fillColor: '#F5A800', fillOpacity: 1 }).addTo(map);
+      var tip = document.createElement('span');
+      tip.textContent = 'Truck';
+      truck.bindTooltip(tip, { direction: 'top', offset: [0, -10] });
+    }
+    if (halo) { map.removeLayer(halo); halo = null; }
+    if (d.accuracy && d.accuracy > 25) {
+      halo = L.circle(pos, { radius: d.accuracy, color: '#1C6B4A', weight: 1, fillOpacity: 0.1 }).addTo(map);
+    }
+    trail.setLatLngs(d.trail || []);
+
+    if (!fitted) {
+      fitted = true;
+      map.fitBounds(bounds.concat([pos]), { padding: [50, 50], maxZoom: 12 });
+    } else if (follow.checked) {
+      map.panTo(pos);
+    }
+
+    if (d.stale) {
+      setStatus('No recent location.', true);
+      detailEl.textContent = 'Last update ' + (d.age === null ? 'unknown' : ago(d.age)) +
+        '. The phone may have lost signal, or the screen may be locked.';
+    } else {
+      setStatus('Live: updated ' + ago(d.age), false);
+      detailEl.textContent = d.km_to_go === null ? '' :
+        'About ' + d.km_to_go + ' km to go (a rough estimate).';
+    }
+  }
+
+  function poll() {
+    fetch(cfg.dataUrl, { credentials: 'same-origin' })
+      .then(function (r) { if (!r.ok) { throw new Error('status ' + r.status); } return r.json(); })
+      .then(render)
+      .catch(function () { detailEl.textContent = 'Could not reach the server. Trying again...'; });
+  }
+  poll();
+  setInterval(function () { if (!document.hidden) { poll(); } }, 8000);
+
+  // The transporter's page sends the phone's position to the server.
+  var shareEl = document.getElementById('share-status');
+  if (cfg.side === 'transporter' && cfg.active && shareEl) {
+    var lastSent = 0;
+    var watchId = null;
+    var wake = null;
+
+    function shareText(text, bad) {
+      shareEl.textContent = text;
+      shareEl.style.color = bad ? '#C93A2B' : '';
+    }
+
+    function keepAwake() {
+      if ('wakeLock' in navigator) {
+        navigator.wakeLock.request('screen').then(function (lock) { wake = lock; }).catch(function () {});
+      }
+    }
+
+    function stopWatching() {
+      if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+      if (wake) { wake.release().catch(function () {}); wake = null; }
+    }
+
+    function send(position) {
+      fetch(cfg.pingUrl, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': cfg.csrf },
+        body: JSON.stringify({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy
+        })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d.ok) {
+            shareText('Sharing. Last sent at ' + new Date().toLocaleTimeString() + '.', false);
+          } else if (d.reason === 'not_active' || d.reason === 'ended') {
+            stopWatching();
+            shareText('Sharing has ended. Refresh the page.', true);
+          } else {
+            shareText('The server did not accept the location.', true);
+          }
+        })
+        .catch(function () { shareText('Could not send the location. Is your session still active? Refresh the page.', true); });
+    }
+
+    function onPosition(position) {
+      var now = Date.now();
+      if (now - lastSent < 10000) { return; }
+      lastSent = now;
+      send(position);
+    }
+
+    function onError(error) {
+      if (error.code === 1) { shareText('Location permission was denied. Allow location for this site in your browser settings, then refresh.', true); }
+      else if (error.code === 2) { shareText('Your position is not available right now. Check that location is turned on for your device.', true); }
+      else { shareText('Waiting for a location signal...', false); }
+    }
+
+    if (!window.isSecureContext) {
+      shareText('Location sharing needs a secure page (HTTPS). It works on this PC at 127.0.0.1 or localhost.', true);
+    } else if (!navigator.geolocation) {
+      shareText('This browser cannot share location.', true);
+    } else {
+      shareText('Waiting for the first location...', false);
+      watchId = navigator.geolocation.watchPosition(onPosition, onError,
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
+      keepAwake();
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden && watchId !== null) { keepAwake(); }
+      });
+      window.addEventListener('pagehide', stopWatching);
+    }
+  }
+})();
+</script>
+{% endblock %}

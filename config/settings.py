@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'trucks',
     'wallet',
     'space',
+    'reach',
+    'tracking',
 ]
 
 MIDDLEWARE = [
@@ -159,3 +161,5 @@ PRICING = {
 PRIVATE_MEDIA_ROOT = BASE_DIR / 'private_media'
 REQUIRE_VERIFICATION = False   # True: only verified users can post loads and send offers
 ESCROW_REQUIRED = False        # True: the shipper must fund escrow before a job can be marked delivered
+SITE_URL = 'http://127.0.0.1:8000'
+ALERT_BACKEND = 'outbox'   # 'outbox' only records alerts. 'twilio' sends them through Twilio (see reach/backends.py)

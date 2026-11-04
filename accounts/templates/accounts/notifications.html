@@ -3,9 +3,12 @@
 {% block title %}Notifications{% endblock %}
 
 {% block content %}
-<div class="page-head">
-  <h1>Notifications</h1>
-  <p class="muted mb-0">Offers, counters, payments and deadlines show up here.</p>
+<div class="page-head d-flex justify-content-between align-items-end flex-wrap gap-2">
+  <div>
+    <h1>Notifications</h1>
+    <p class="muted mb-0">Offers, counters, payments and deadlines show up here, and appear on screen as they happen.</p>
+  </div>
+  <a href="{% url 'alerts' %}" class="btn btn-outline-primary">Phone alerts (WhatsApp or SMS)</a>
 </div>
 <div class="card">
   {% for n in items %}
