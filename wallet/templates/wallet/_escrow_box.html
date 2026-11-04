@@ -1,0 +1,41 @@
+{% if show %}
+<div class="card mb-3 {% if escrow and escrow.status == 'held' %}border-warning{% endif %}">
+  <div class="card-body">
+    <h2 class="h5">Escrow</h2>
+    {% if escrow %}
+      {% if escrow.status == 'held' %}
+        <p class="mb-1"><strong>${{ escrow.amount }} is held in escrow.</strong></p>
+        {% if side == 'shipper' %}
+          <p class="muted mb-0">It is paid to the transporter when you mark the load as delivered. If something goes wrong, raise a dispute first.</p>
+        {% else %}
+          <p class="muted mb-0">The shipper has funded the job. It is paid to your wallet when the shipper confirms delivery.</p>
+        {% endif %}
+      {% elif escrow.status == 'released' %}
+        <p class="mb-0">${{ escrow.amount }} was paid to the transporter.</p>
+      {% elif escrow.status == 'refunded' %}
+        <p class="mb-0">${{ escrow.amount }} was refunded to the shipper.</p>
+      {% else %}
+        <p class="mb-0">${{ escrow.amount }} was split between both sides after a dispute.</p>
+      {% endif %}
+    {% else %}
+      {% if side == 'shipper' and load.status == 'booked' %}
+        <p class="mb-2">Pay the agreed price of <strong>${{ offer.price }}</strong> into escrow so the transporter knows the money is secured.{% if required %} This is required before you can mark the load as delivered.{% endif %}</p>
+        <p class="small muted">Wallet balance: ${{ balance }} (simulated)</p>
+        {% if can_fund %}
+          <form method="post" action="{% url 'escrow_fund' offer.pk %}">
+            {% csrf_token %}
+            <button class="btn btn-success">Fund escrow with ${{ offer.price }}</button>
+          </form>
+        {% else %}
+          <p class="mb-2">You need ${{ shortfall }} more in your wallet.</p>
+          <a href="{% url 'wallet_home' %}" class="btn btn-outline-primary">Top up my wallet</a>
+        {% endif %}
+      {% elif side == 'transporter' and load.status == 'booked' %}
+        <p class="mb-0 muted">The shipper has not funded escrow yet.{% if required %} Wait for escrow before you load.{% else %} Escrow is optional on this job, so you may be paid directly.{% endif %}</p>
+      {% else %}
+        <p class="mb-0 muted">No escrow was used on this job.</p>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endif %}

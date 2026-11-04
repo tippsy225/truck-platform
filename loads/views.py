@@ -11,6 +11,8 @@ from django.views.decorators.http import require_POST
 
 from accounts.notify import notify
 from trucks.models import Truck
+from wallet.models import Dispute, Escrow
+from wallet.services import release_escrow
 
 from .forms import CounterForm, LoadForm, OfferForm, PaymentForm
 from .models import Load, Offer, OfferEvent, Payment
@@ -23,6 +25,15 @@ DEMO_PREFIX = 'https://demo.local/payment/'
 def _role(user):
     profile = getattr(user, 'profile', None)
     return profile.role if profile else None
+
+
+def _needs_verification(user):
+    if not getattr(settings, 'REQUIRE_VERIFICATION', False):
+        return False
+    if user.is_staff:
+        return False
+    profile = getattr(user, 'profile', None)
+    return not (profile and profile.is_verified)
 
 
 def _demo_mode():
@@ -72,6 +83,9 @@ def post_load(request):
     if _role(request.user) != 'shipper':
         messages.error(request, 'Only shippers can post loads.')
         return redirect('home')
+    if _needs_verification(request.user):
+        messages.error(request, 'Verify your identity before you post a load.')
+        return redirect('kyc')
     if request.method == 'POST':
         form = LoadForm(request.POST)
         if form.is_valid():
@@ -104,11 +118,13 @@ def load_detail(request, pk):
     my_offer = None
     form = None
     has_trucks = False
+    needs_verification = False
     if role == 'transporter' and not is_owner:
         has_trucks = request.user.trucks.exists()
         my_offer = (load.offers.filter(transporter=request.user)
                     .exclude(status__in=['declined', 'withdrawn', 'expired']).first())
-        if load.status == 'open' and my_offer is None and has_trucks:
+        needs_verification = _needs_verification(request.user)
+        if load.status == 'open' and my_offer is None and has_trucks and not needs_verification:
             if request.method == 'POST':
                 form = OfferForm(request.POST, user=request.user, load=load)
                 if form.is_valid():
@@ -143,6 +159,12 @@ def load_detail(request, pk):
     fee_paid = bool(accepted_offer) and accepted_offer.fee_paid
     can_see_contacts = is_party and fee_paid
 
+    open_dispute = bool(accepted_offer) and Dispute.objects.filter(
+        offer=accepted_offer, status='open').exists()
+    escrow_held = bool(accepted_offer) and Escrow.objects.filter(
+        offer=accepted_offer, status='held').exists()
+    escrow_required = getattr(settings, 'ESCROW_REQUIRED', False)
+
     my_paid = False
     my_fee = None
     pending_payment = None
@@ -163,10 +185,14 @@ def load_detail(request, pk):
             if not pending_payment:
                 payment_form = PaymentForm()
 
+    can_deliver = (is_owner and load.status == 'booked' and fee_paid and not open_dispute
+                   and (escrow_held or not escrow_required))
+
     return render(request, 'loads/load_detail.html', {
         'load': load,
         'form': form,
         'has_trucks': has_trucks,
+        'needs_verification': needs_verification,
         'is_owner': is_owner,
         'role': role,
         'offers': offers,
@@ -179,7 +205,7 @@ def load_detail(request, pk):
         'pending_payment': pending_payment,
         'payment_form': payment_form,
         'deadline': deadline,
-        'can_deliver': is_owner and load.status == 'booked' and fee_paid,
+        'can_deliver': can_deliver,
     })
 
 
@@ -272,10 +298,28 @@ def mark_delivered(request, pk):
     if load.status != 'booked' or not offer or not offer.fee_paid:
         messages.error(request, 'A load can be marked as delivered once it is booked and both fees are paid.')
         return redirect('load_detail', pk=load.pk)
-    load.status = 'delivered'
-    load.save()
-    notify(offer.transporter, f'"{load.title}" was marked as delivered. Well done.', _load_url(load))
-    messages.success(request, 'Load marked as delivered.')
+    if Dispute.objects.filter(offer=offer, status='open').exists():
+        messages.error(request, 'There is an open dispute on this job. A reviewer must resolve it first.')
+        return redirect('load_detail', pk=load.pk)
+    escrow = Escrow.objects.filter(offer=offer, status='held').first()
+    if escrow is None and getattr(settings, 'ESCROW_REQUIRED', False):
+        messages.error(request, 'Fund escrow before you mark this job as delivered.')
+        return redirect('load_detail', pk=load.pk)
+
+    with transaction.atomic():
+        if escrow is not None:
+            release_escrow(offer)
+        load.status = 'delivered'
+        load.save()
+
+    if escrow is not None:
+        notify(offer.transporter,
+               f'"{load.title}" was marked as delivered. ${escrow.amount} was paid to your wallet.',
+               _load_url(load))
+        messages.success(request, f'Load marked as delivered. ${escrow.amount} was released to the transporter.')
+    else:
+        notify(offer.transporter, f'"{load.title}" was marked as delivered. Well done.', _load_url(load))
+        messages.success(request, 'Load marked as delivered.')
     return redirect('load_detail', pk=load.pk)
 
 

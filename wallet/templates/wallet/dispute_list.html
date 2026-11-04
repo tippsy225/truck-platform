@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block title %}My disputes{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>My disputes</h1>
+  <p class="muted mb-0">Disputes you raised or that were raised on your jobs.</p>
+</div>
+<div class="card">
+  {% for d in disputes %}
+  <div class="note d-flex justify-content-between align-items-center gap-3">
+    <div>
+      <a href="{% url 'dispute_detail' d.pk %}"><strong>{{ d.get_reason_display }}</strong></a> on {{ d.offer.load.title }}
+      <div class="small muted">{{ d.created_at|timesince }} ago</div>
+    </div>
+    <span class="badge bg-secondary">{{ d.get_status_display }}</span>
+  </div>
+  {% empty %}
+  <div class="empty m-3">You have no disputes. That is a good thing.</div>
+  {% endfor %}
+</div>
+{% endblock %}

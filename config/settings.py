@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'loads',
     'accounts',
     'trucks',
+    'wallet',
 ]
 
 MIDDLEWARE = [
@@ -155,3 +156,5 @@ PRICING = {
     'range': 0.15,
 }
 PRIVATE_MEDIA_ROOT = BASE_DIR / 'private_media'
+REQUIRE_VERIFICATION = False   # True: only verified users can post loads and send offers
+ESCROW_REQUIRED = False        # True: the shipper must fund escrow before a job can be marked delivered

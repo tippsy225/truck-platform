@@ -1,0 +1,17 @@
+{% if show %}
+<div class="card mb-3">
+  <div class="card-body">
+    <h2 class="h5">Problems with this job</h2>
+    {% for d in disputes %}
+    <p class="mb-1">
+      <a href="{% url 'dispute_detail' d.pk %}">Dispute: {{ d.get_reason_display }}</a>
+      <span class="badge bg-secondary">{{ d.get_status_display }}</span>
+    </p>
+    {% endfor %}
+    {% if can_raise %}
+    <p class="muted small mb-2 mt-2">If something goes wrong, raise a dispute. Any escrow payment is paused and a reviewer steps in.</p>
+    <a href="{% url 'dispute_new' offer.pk %}" class="btn btn-outline-danger">Raise a dispute</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

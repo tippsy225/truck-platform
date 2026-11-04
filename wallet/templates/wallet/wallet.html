@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block title %}Wallet{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Wallet</h1>
+  <p class="muted mb-0">Money for jobs you have booked is held in escrow until the load is delivered.</p>
+</div>
+
+{% if demo %}
+<div class="alert alert-warning">Simulated wallet. No real money moves. Top ups and withdrawals are practice entries so you can test escrow. Holding real customer money needs the right licences and a regulated payment provider.</div>
+{% endif %}
+
+<div class="stats">
+  <div class="stat"><strong>${{ balance }}</strong><span>Available balance</span></div>
+  <div class="stat"><strong>${{ held_by_me_total }}</strong><span>You have in escrow</span></div>
+  <div class="stat"><strong>${{ held_for_me_total }}</strong><span>Waiting for you in escrow</span></div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-12 col-md-6">
+    <form method="post" action="{% url 'wallet_topup' %}" class="card p-4">
+      {% csrf_token %}
+      <h2 class="h5">Top up</h2>
+      {{ topup_form.as_p }}
+      <button class="btn btn-primary">Add to wallet</button>
+    </form>
+  </div>
+  <div class="col-12 col-md-6">
+    <form method="post" action="{% url 'wallet_withdraw' %}" class="card p-4">
+      {% csrf_token %}
+      <h2 class="h5">Withdraw</h2>
+      {{ withdraw_form.as_p }}
+      <button class="btn btn-outline-primary">Withdraw</button>
+    </form>
+  </div>
+</div>
+
+{% if held_by_me or held_for_me %}
+<h2 class="h5">Money in escrow</h2>
+<div class="card mb-4">
+  {% for e in held_by_me %}
+  <div class="note">${{ e.amount }} held for <a href="{% url 'load_detail' e.offer.load.pk %}">{{ e.offer.load.title }}</a>. Paid to the transporter when you confirm delivery.</div>
+  {% endfor %}
+  {% for e in held_for_me %}
+  <div class="note">${{ e.amount }} waiting for you on <a href="{% url 'load_detail' e.offer.load.pk %}">{{ e.offer.load.title }}</a>. Paid to your wallet when the shipper confirms delivery.</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="d-flex justify-content-between align-items-end">
+  <h2 class="h5">History</h2>
+  <a href="{% url 'dispute_list' %}">My disputes</a>
+</div>
+<div class="card">
+  {% for e in entries %}
+  <div class="note d-flex justify-content-between align-items-start gap-3">
+    <div>
+      {{ e.get_kind_display }}{% if e.note %}: {{ e.note }}{% endif %}
+      <div class="small muted">{{ e.created_at|date:"d M Y, H:i" }}</div>
+    </div>
+    <strong style="color:{% if e.amount > 0 %}var(--msasa){% else %}var(--brake){% endif %};">{% if e.amount > 0 %}+{% endif %}${{ e.amount }}</strong>
+  </div>
+  {% empty %}
+  <div class="empty m-3">No wallet activity yet. Top up to start.</div>
+  {% endfor %}
+</div>
+{% endblock %}

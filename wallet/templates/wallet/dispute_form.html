@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block title %}Raise a dispute{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Raise a dispute</h1>
+  <p class="muted mb-0">{{ load.title }}, {{ load.pickup }} to {{ load.destination }}. A reviewer will look at both sides and decide what happens to any escrow money.</p>
+</div>
+<div style="max-width:560px;">
+  <form method="post" class="card p-4">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-danger">Send dispute</button>
+      <a href="{% url 'load_detail' load.pk %}" class="btn btn-outline-primary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

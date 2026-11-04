@@ -167,6 +167,7 @@
           {% endif %}
           <a class="navlink" href="{% url 'notifications' %}">Notifications{% if unread %}<span class="count">{{ unread }}</span>{% endif %}</a>
           <a class="navlink" href="{% url 'account' %}">Account</a>
+                    <a class="navlink" href="{% url 'wallet_home' %}">Wallet</a>
           <span class="userchip">{{ user.username }}{% if user.profile %} ({{ user.profile.role|title }}){% endif %}</span>
           {% if user.profile.both_roles %}
           <form method="post" action="{% url 'switch_role' %}" class="d-inline">

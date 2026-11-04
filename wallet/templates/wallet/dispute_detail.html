@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}Dispute{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Dispute: {{ dispute.get_reason_display }}</h1>
+  <p class="muted mb-0">{{ load.title }}, {{ load.pickup }} to {{ load.destination }}. Raised by {{ dispute.raised_by.username }} {{ dispute.created_at|timesince }} ago.</p>
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-lg-5">
+    <div class="card p-4">
+      <p><span class="badge {% if dispute.status == 'open' %}bg-warning text-dark{% else %}bg-success{% endif %}">{{ dispute.get_status_display }}</span></p>
+      <p>{{ dispute.description|linebreaksbr }}</p>
+      <hr>
+      <p class="mb-1"><strong>Escrow</strong></p>
+      {% if escrow %}
+        <p class="mb-2">${{ escrow.amount }}, {{ escrow.get_status_display|lower }}</p>
+      {% else %}
+        <p class="mb-2 muted">No escrow was funded for this job.</p>
+      {% endif %}
+      {% if dispute.status == 'resolved' %}
+        <hr>
+        <p class="mb-1"><strong>Outcome</strong></p>
+        <p class="mb-1">{{ dispute.get_resolution_display }}</p>
+        {% if dispute.admin_note %}<p class="muted mb-0">Reviewer note: {{ dispute.admin_note }}</p>{% endif %}
+      {% else %}
+        <p class="muted small mb-0">Escrow payment is paused until a reviewer decides.</p>
+      {% endif %}
+      <p class="mt-3 mb-0"><a href="{% url 'load_detail' load.pk %}">Back to the load</a></p>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-7">
+    <h2 class="h5">Conversation</h2>
+    <div class="card mb-3">
+      {% for m in thread %}
+      <div class="note">
+        <strong>{{ m.author.username }}{% if m.author.is_staff %} (reviewer){% endif %}</strong>
+        <div>{{ m.body|linebreaksbr }}</div>
+        <div class="small muted">{{ m.created_at|timesince }} ago</div>
+      </div>
+      {% empty %}
+      <div class="empty m-3">No messages yet.</div>
+      {% endfor %}
+    </div>
+    {% if dispute.status == 'open' %}
+    <form method="post" class="card p-4">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button class="btn btn-primary">Send message</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
