@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load trust_tags %}
+
+{% block title %}Truck space{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Truck space</h1>
+  <p class="muted mb-0">Trucks with spare room on a planned trip. Book only the tonnes you need.</p>
+</div>
+
+<form method="get" class="filters">
+  <div>
+    <label for="f-from">From</label>
+    <select id="f-from" name="origin">
+      <option value="">Any town</option>
+      {% for t in towns %}<option value="{{ t }}" {% if selected.origin == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="f-to">To</label>
+    <select id="f-to" name="destination">
+      <option value="">Any town</option>
+      {% for t in towns %}<option value="{{ t }}" {% if selected.destination == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="f-date">Leaving after</label>
+    <input id="f-date" type="date" name="date" value="{{ selected.date }}">
+  </div>
+  <div>
+    <label for="f-t">Tonnes needed</label>
+    <input id="f-t" type="number" name="tonnes" min="0" step="0.5" value="{{ selected.tonnes }}" placeholder="Any">
+  </div>
+  <div>
+    <label for="f-p">Max price per tonne</label>
+    <input id="f-p" type="number" name="max_price" min="0" step="1" value="{{ selected.max_price }}" placeholder="Any">
+  </div>
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary flex-grow-1">Search</button>
+    {% if filtered %}<a href="{% url 'space_list' %}" class="btn btn-outline-primary">Clear</a>{% endif %}
+  </div>
+</form>
+
+<div class="row g-3">
+  {% for trip in trips %}
+  <div class="col-12 col-md-6 col-xl-4">
+    <article class="card h-100">
+      <div class="card-body d-flex flex-column">
+        <div class="route"><span class="town">{{ trip.origin }}</span><span class="line"></span><span class="town">{{ trip.destination }}</span></div>
+        {% if trip.via %}<p class="small muted mb-2">Via {{ trip.via }}</p>{% endif %}
+        <div class="chips">
+          <span class="chip">{{ trip.truck.get_truck_type_display }}</span>
+          {% if trip.negotiable %}<span class="chip chip-ok">Price negotiable</span>{% else %}<span class="chip">Fixed price</span>{% endif %}
+        </div>
+        <dl class="facts">
+          <div><dt>Departs</dt><dd>{{ trip.departure_date|date:"d M Y" }}</dd></div>
+          <div><dt>Free space</dt><dd>{{ trip.tonnes_left }} t</dd></div>
+        </dl>
+        <p class="mb-2 small">Transporter: {% trust_chip trip.owner %}</p>
+        <div class="load-foot mt-auto">
+          <div class="price"><span class="price-label">Per tonne</span><strong>${{ trip.price_per_tonne }}</strong></div>
+          <a href="{% url 'space_trip' trip.pk %}" class="btn btn-primary">View and request space</a>
+        </div>
+      </div>
+    </article>
+  </div>
+  {% empty %}
+  <div class="col-12"><div class="empty">
+    {% if filtered %}No trips match these filters. Try removing one. Direction matters: a truck going from Gweru to Kwekwe does not serve Kwekwe to Gweru.{% else %}No trips with spare space yet. When a transporter posts one, it will appear here.{% endif %}
+  </div></div>
+  {% endfor %}
+</div>
+{% endblock %}

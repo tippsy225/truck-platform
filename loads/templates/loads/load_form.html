@@ -27,7 +27,8 @@
         <p class="display-font mb-1" style="font-size:2.4rem;" id="price-suggested"></p>
         <p class="mb-3" id="price-range"></p>
         <button type="button" class="btn btn-warning" id="price-use">Use this price</button>
-        <p class="small muted mt-3 mb-0">This is an estimate from distance and weight. Fuel prices, road conditions and the type of truck can change what transporters ask.</p>
+        <p class="small mt-3 mb-1" id="price-note"></p>
+        <p class="small muted mb-0">This is an estimate. Fuel prices, road conditions and the type of truck can change what transporters ask.</p>
       </div>
     </div>
   </div>
@@ -80,6 +81,7 @@
         document.getElementById('price-distance').textContent = 'About ' + d.distance_km + ' km by road';
         document.getElementById('price-suggested').textContent = '$' + d.suggested;
         document.getElementById('price-range').textContent = 'Typical range: $' + d.low + ' to $' + d.high;
+        document.getElementById('price-note').textContent = d.note || '';
       })
       .catch(function (e) {
         showMessage('The price guide could not load (' + e.message + '). Refresh the page and try again.');

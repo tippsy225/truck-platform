@@ -10,4 +10,5 @@ urlpatterns = [
     path('trucks/', include('trucks.urls')),
     path('accounts/', include('accounts.urls')),
     path('wallet/', include('wallet.urls')),
+    path('space/', include('space.urls')),
 ]

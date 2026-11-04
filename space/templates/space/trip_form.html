@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block title %}Post a trip{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Post a trip</h1>
+  <p class="muted mb-0">Planning a run? Sell the space you will not use. Shippers with loads on your route are alerted automatically.</p>
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-lg-6">
+    <form method="post" class="card p-4">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit" class="btn btn-primary">Post trip</button>
+    </form>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card p-4" aria-live="polite">
+      <h2 class="h5">Price guide</h2>
+      <p class="muted mb-0" id="pg-msg">Choose where you start, where you end and the tonnes you can carry.</p>
+      <div id="pg-result" hidden>
+        <p class="mb-1 muted" id="pg-line"></p>
+        <p class="display-font mb-1" style="font-size:2.2rem;" id="pg-pt"></p>
+        <button type="button" class="btn btn-warning mb-3" id="pg-use">Use this price</button>
+        <p class="small muted mb-0" id="pg-note"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var origin = document.getElementById('id_origin');
+  var dest = document.getElementById('id_destination');
+  var tonnes = document.getElementById('id_tonnes_available');
+  var price = document.getElementById('id_price_per_tonne');
+  var msg = document.getElementById('pg-msg');
+  var box = document.getElementById('pg-result');
+  var perTonne = null;
+  var last = '';
+
+  function show(text) { box.hidden = true; msg.hidden = false; msg.textContent = text; }
+  if (!origin || !dest || !tonnes || !price) { show('The form fields were not found. Press Ctrl + F5.'); return; }
+
+  function update() {
+    var t = parseFloat(tonnes.value);
+    if (!origin.value || !dest.value || !(t > 0)) {
+      show('Choose where you start, where you end and the tonnes you can carry.');
+      return;
+    }
+    var url = '{% url "price_suggestion" %}?pickup=' + encodeURIComponent(origin.value) +
+      '&destination=' + encodeURIComponent(dest.value) + '&tonnes=' + encodeURIComponent(t);
+    fetch(url, { credentials: 'same-origin' })
+      .then(function (r) { if (!r.ok) { throw new Error('server answered ' + r.status); } return r.json(); })
+      .then(function (d) {
+        if (!d.ok) { show('No guide for this route. Pick two different towns from the lists.'); return; }
+        perTonne = (d.suggested / t).toFixed(2);
+        msg.hidden = true;
+        box.hidden = false;
+        document.getElementById('pg-line').textContent = 'About ' + d.distance_km + ' km. A full ' + t + ' t would be $' + d.low + ' to $' + d.high + ' in total.';
+        document.getElementById('pg-pt').textContent = '$' + perTonne + ' per tonne';
+        document.getElementById('pg-note').textContent = d.note || '';
+      })
+      .catch(function (e) { show('The price guide could not load (' + e.message + ').'); });
+  }
+
+  setInterval(function () {
+    var key = origin.value + '|' + dest.value + '|' + tonnes.value;
+    if (key !== last) { last = key; update(); }
+  }, 500);
+
+  document.getElementById('pg-use').addEventListener('click', function () {
+    if (perTonne !== null) { price.value = perTonne; price.focus(); }
+  });
+})();
+</script>
+{% endblock %}

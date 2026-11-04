@@ -157,10 +157,13 @@
             <a class="navlink" href="{% url 'truck_list' %}">Available trucks</a>
             <a class="navlink" href="{% url 'post_load' %}">Post a load</a>
             <a class="navlink" href="{% url 'my_loads' %}">My loads</a>
+            <a class="navlink" href="{% url 'space_list' %}">Truck space</a>
           {% elif user.profile.role == 'transporter' %}
             <a class="navlink" href="{% url 'load_list' %}">Available loads</a>
             <a class="navlink" href="{% url 'my_offers' %}">My offers</a>
             <a class="navlink" href="{% url 'my_trucks' %}">My trucks</a>
+            <a class="navlink" href="{% url 'my_trips' %}">My trips</a>
+            <a class="navlink" href="{% url 'trip_new' %}">Post a trip</a>
           {% else %}
             <a class="navlink" href="{% url 'load_list' %}">Loads</a>
             <a class="navlink" href="{% url 'truck_list' %}">Trucks</a>

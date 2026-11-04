@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% load trust_tags %}
+
+{% block title %}Trucks heading your way{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Trucks heading your way</h1>
+  <p class="muted mb-0">{{ load.title }}, {{ load.pickup }} to {{ load.destination }}, {{ load.weight_tonnes }} t. These trips pass through both towns in the right order and have enough free space.</p>
+</div>
+
+<div class="row g-3">
+  {% for m in matches %}
+  <div class="col-12 col-md-6 col-xl-4">
+    <article class="card h-100">
+      <div class="card-body d-flex flex-column">
+        <div class="chips">
+          <span class="chip {% if m.score >= 80 %}chip-ok{% elif m.score >= 60 %}chip-warn{% endif %}">{% if m.score >= 80 %}Strong match{% elif m.score >= 60 %}Good match{% else %}Possible match{% endif %}</span>
+          <span class="chip">{{ m.trip.truck.get_truck_type_display }}</span>
+        </div>
+        <div class="route"><span class="town">{{ m.trip.origin }}</span><span class="line"></span><span class="town">{{ m.trip.destination }}</span></div>
+        {% if m.trip.via %}<p class="small muted mb-2">Via {{ m.trip.via }}</p>{% endif %}
+        <dl class="facts">
+          <div><dt>Departs</dt><dd>{{ m.trip.departure_date|date:"d M Y" }}</dd></div>
+          <div><dt>Free space</dt><dd>{{ m.trip.tonnes_left }} t</dd></div>
+        </dl>
+        <p class="mb-2 small">Transporter: {% trust_chip m.trip.owner %}</p>
+        <div class="load-foot mt-auto">
+          <div class="price"><span class="price-label">Estimate for your {{ load.weight_tonnes }} t</span><strong>${{ m.estimate }}</strong></div>
+          <a href="{% url 'space_trip' m.trip.pk %}?load={{ load.pk }}" class="btn btn-primary">Request space</a>
+        </div>
+      </div>
+    </article>
+  </div>
+  {% empty %}
+  <div class="col-12"><div class="empty">
+    {% if load.status != 'open' %}This load is no longer open.{% else %}No matching trips right now. You are alerted automatically when a transporter posts a trip that fits this load.{% endif %}
+  </div></div>
+  {% endfor %}
+</div>
+<p class="mt-3"><a href="{% url 'my_loads' %}">Back to my loads</a></p>
+{% endblock %}
