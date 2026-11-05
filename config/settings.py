@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'space',
     'reach',
     'tracking',
+    'growth',
 ]
 
 MIDDLEWARE = [
@@ -163,3 +164,5 @@ REQUIRE_VERIFICATION = False   # True: only verified users can post loads and se
 ESCROW_REQUIRED = False        # True: the shipper must fund escrow before a job can be marked delivered
 SITE_URL = 'http://127.0.0.1:8000'
 ALERT_BACKEND = 'outbox'   # 'outbox' only records alerts. 'twilio' sends them through Twilio (see reach/backends.py)
+REFERRAL_BONUS = '2.00'        # simulated wallet credit for each side
+REFERRAL_MAX_REWARDS = 20      # rewarded referrals allowed per person

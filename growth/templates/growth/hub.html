@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+
+{% block title %}Plans and rewards{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Plans and rewards</h1>
+  <p class="muted mb-0">Lower your platform fees with a plan, and earn a bonus when friends join and complete a job.</p>
+</div>
+
+<div class="alert alert-warning">Simulated payments. Plans are bought with your simulated wallet balance (${{ balance }}), so no real money moves. <a href="{% url 'wallet_home' %}">Top up your wallet</a> to try one.</div>
+
+<h2 class="h5">Plans</h2>
+<div class="row g-3 mb-4">
+  {% for plan in plans %}
+  <div class="col-12 col-md-4">
+    <div class="card h-100 {% if plan.current %}border-warning{% endif %}">
+      <div class="card-body d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-start">
+          <h3 class="load-title">{{ plan.name }}</h3>
+          {% if plan.current %}<span class="chip chip-ok">Your plan</span>{% endif %}
+        </div>
+        <p class="display-font mb-1" style="font-size:2rem;">{% if plan.price %}${{ plan.price }}{% else %}Free{% endif %}{% if plan.price %}<span class="muted" style="font-size:1rem;"> per {{ period }} days</span>{% endif %}</p>
+        <ul class="mb-3">
+          {% for perk in plan.perks %}<li>{{ perk }}</li>{% endfor %}
+        </ul>
+        <div class="mt-auto">
+          {% if plan.expires %}<p class="small muted mb-2">Active until {{ plan.expires|date:"d M Y" }}.</p>{% endif %}
+          {% if plan.price %}
+          <form method="post" action="{% url 'growth_subscribe' plan.key %}">
+            {% csrf_token %}
+            <button class="btn {% if plan.current %}btn-outline-primary{% else %}btn-primary{% endif %}">{% if plan.current %}Renew for {{ period }} more days{% else %}Choose {{ plan.name }}{% endif %}</button>
+          </form>
+          {% elif plan.current %}
+          <p class="small muted mb-0">You are on the free plan.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+<p class="small muted">Plans last {{ period }} days and do not renew by themselves. Switching plan starts the new one straight away, with no refund for unused days. The discount applies to platform fees that are not yet paid.</p>
+
+<h2 class="h5 mt-4">Refer a friend</h2>
+<div class="row g-4">
+  <div class="col-12 col-lg-6">
+    <div class="card p-4">
+      <p>Share your link. When someone joins with it and completes their <strong>first delivered job</strong>, you and they each get <strong>${{ bonus }}</strong> in the simulated wallet.</p>
+      <p class="mb-1 small muted">Your code</p>
+      <p class="display-font mb-3" style="font-size:1.8rem;letter-spacing:.08em;">{{ code }}</p>
+      <label for="ref-link">Your link</label>
+      <input id="ref-link" type="text" readonly value="{{ link }}" style="width:100%;padding:.6rem .75rem;border:1.5px solid var(--line);border-radius:8px;">
+      <button type="button" class="btn btn-outline-primary mt-2" id="copy-link">Copy link</button>
+      <span class="small muted ms-2" id="copy-note" role="status"></span>
+      {% if referred_by %}<p class="small muted mt-3 mb-0">You joined through {{ referred_by.referrer.username }}'s link{% if referred_by.status == 'pending' %}, and your welcome bonus arrives after your first delivered job{% endif %}.</p>{% endif %}
+    </div>
+  </div>
+  <div class="col-12 col-lg-6">
+    <div class="card">
+      <div class="note"><strong>{{ made|length }}</strong> people joined with your code, <strong>{{ rewarded }}</strong> rewarded.</div>
+      {% for r in made %}
+      <div class="note d-flex justify-content-between align-items-center gap-2">
+        <span>{{ r.referred.username }}</span>
+        <span class="badge bg-secondary">{{ r.get_status_display }}</span>
+      </div>
+      {% empty %}
+      <div class="empty m-3">No one has joined with your code yet.</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var button = document.getElementById('copy-link');
+  var field = document.getElementById('ref-link');
+  var note = document.getElementById('copy-note');
+  button.addEventListener('click', function () {
+    field.select();
+    var done = function () { note.textContent = 'Copied.'; };
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(field.value).then(done, function () { document.execCommand('copy'); done(); });
+    } else {
+      document.execCommand('copy');
+      done();
+    }
+  });
+})();
+</script>
+{% endblock %}

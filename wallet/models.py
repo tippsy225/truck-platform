@@ -9,6 +9,8 @@ class LedgerEntry(models.Model):
         ('escrow_hold', 'Moved into escrow'),
         ('escrow_release', 'Paid out of escrow'),
         ('escrow_refund', 'Refunded from escrow'),
+        ('subscription', 'Plan subscription'),
+        ('referral_bonus', 'Referral bonus'),
     ]
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,

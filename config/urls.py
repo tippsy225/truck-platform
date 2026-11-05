@@ -14,6 +14,7 @@ urlpatterns = [
     path('space/', include('space.urls')),
     path('reach/', include('reach.urls')),
     path('tracking/', include('tracking.urls')),
+    path('growth/', include('growth.urls')),
     path('manifest.webmanifest', pwa.manifest, name='pwa_manifest'),
     path('sw.js', pwa.service_worker, name='pwa_sw'),
     path('offline/', pwa.offline, name='pwa_offline'),

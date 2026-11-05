@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}Owner dashboard{% endblock %}
+
+{% block content %}
+<style>
+  .trend { display:grid; grid-template-columns:repeat(14,1fr); gap:.4rem; align-items:end; }
+  .trend-col { text-align:center; font-size:.72rem; color:var(--muted); }
+  .bars { height:120px; display:flex; gap:2px; align-items:flex-end; justify-content:center; }
+  .bar { width:45%; background:var(--msasa); border-radius:3px 3px 0 0; min-height:2px; }
+  .bar2 { background:var(--amber); }
+  .legend span { display:inline-block; width:.8rem; height:.8rem; border-radius:2px; margin-right:.3rem; vertical-align:middle; }
+  .table-clean { width:100%; }
+  .table-clean td, .table-clean th { padding:.5rem 1rem; border-bottom:1px solid var(--line); text-align:left; }
+</style>
+
+<div class="page-head">
+  <h1>Owner dashboard</h1>
+  <p class="muted mb-0">How the marketplace is doing. Money here comes from demo payments and the simulated wallet, so it is practice data.</p>
+</div>
+
+<h2 class="h5">Needs attention</h2>
+<div class="stats">
+  <div class="stat"><strong>{{ s.disputes_open }}</strong><span>Open disputes. <a href="/admin/wallet/dispute/">Review</a></span></div>
+  <div class="stat"><strong>{{ s.kyc_pending }}</strong><span>Identity checks waiting. <a href="/admin/accounts/kycsubmission/">Review</a></span></div>
+  <div class="stat"><strong>${{ s.refund_due|floatformat:2 }}</strong><span>Platform fees marked refund due</span></div>
+</div>
+
+<h2 class="h5">Marketplace</h2>
+<div class="stats">
+  <div class="stat"><strong>{{ s.users_total }}</strong><span>Users ({{ s.users_new }} joined in 30 days)</span></div>
+  <div class="stat"><strong>{{ s.loads_total }}</strong><span>Loads posted</span></div>
+  <div class="stat"><strong>{{ s.jobs }}</strong><span>Jobs booked or delivered</span></div>
+  <div class="stat"><strong>{{ s.accept_rate }}%</strong><span>Offers that became jobs</span></div>
+</div>
+
+<h2 class="h5">Money (demo)</h2>
+<div class="stats">
+  <div class="stat"><strong>${{ s.gmv|floatformat:2 }}</strong><span>Value of jobs booked or delivered</span></div>
+  <div class="stat"><strong>${{ s.fees|floatformat:2 }}</strong><span>Platform fees paid ({{ s.fees_count }} payments)</span></div>
+  <div class="stat"><strong>${{ s.escrow_held|floatformat:2 }}</strong><span>Held in escrow now</span></div>
+  <div class="stat"><strong>${{ s.wallet_total|floatformat:2 }}</strong><span>In simulated wallets</span></div>
+  <div class="stat"><strong>${{ s.mrr|floatformat:2 }}</strong><span>Monthly plan income</span></div>
+  <div class="stat"><strong>{{ s.dispute_rate }}%</strong><span>Disputes per job</span></div>
+</div>
+
+<h2 class="h5">Last 14 days</h2>
+<div class="card p-4 mb-4">
+  <p class="legend small mb-3"><span style="background:var(--msasa);"></span>Loads posted <span style="background:var(--amber);margin-left:1rem;"></span>Offers accepted</p>
+  <div class="trend">
+    {% for d in s.trend %}
+    <div class="trend-col">
+      <div class="bars">
+        <div class="bar" style="height:{{ d.loads_pct }}%;" title="{{ d.label }}: {{ d.loads }} loads"></div>
+        <div class="bar bar2" style="height:{{ d.bookings_pct }}%;" title="{{ d.label }}: {{ d.bookings }} accepted"></div>
+      </div>
+      <div>{{ d.loads }}/{{ d.bookings }}</div>
+      <div>{{ d.label }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  <p class="small muted mt-2 mb-0">Under each day: loads posted / offers accepted.</p>
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-lg-6">
+    <h2 class="h5">Busiest routes</h2>
+    <div class="card">
+      <table class="table-clean">
+        <tr><th>Route</th><th>Jobs</th><th>Value</th></tr>
+        {% for r in s.routes %}
+        <tr><td>{{ r.load__pickup }} to {{ r.load__destination }}</td><td>{{ r.jobs }}</td><td>${{ r.value|floatformat:2 }}</td></tr>
+        {% empty %}
+        <tr><td colspan="3" class="muted">No booked jobs yet.</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6">
+    <h2 class="h5">People and growth</h2>
+    <div class="card">
+      <table class="table-clean">
+        <tr><td>Shippers</td><td>{{ s.roles.shipper|default:0 }}</td></tr>
+        <tr><td>Transporters</td><td>{{ s.roles.transporter|default:0 }}</td></tr>
+        <tr><td>Verified identities</td><td>{{ s.verified }}</td></tr>
+        <tr><td>Open loads</td><td>{{ s.loads_by_status.open|default:0 }}</td></tr>
+        <tr><td>Booked loads</td><td>{{ s.loads_by_status.booked|default:0 }}</td></tr>
+        <tr><td>Delivered loads</td><td>{{ s.loads_by_status.delivered|default:0 }}</td></tr>
+        <tr><td>Referrals (rewarded)</td><td>{{ s.referrals }} ({{ s.referrals_rewarded }})</td></tr>
+        {% for p in s.plans %}<tr><td>{{ p.name }} subscribers</td><td>{{ p.n }}</td></tr>{% endfor %}
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

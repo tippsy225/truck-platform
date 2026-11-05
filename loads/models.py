@@ -79,11 +79,13 @@ class Offer(models.Model):
 
     @property
     def shipper_fee(self):
-        return self._fee(settings.PLATFORM_FEE_PERCENT_SHIPPER)
+        from growth.plans import apply_discount
+        return apply_discount(self._fee(settings.PLATFORM_FEE_PERCENT_SHIPPER), self.load.shipper)
 
     @property
     def transporter_fee(self):
-        return self._fee(settings.PLATFORM_FEE_PERCENT_TRANSPORTER)
+        from growth.plans import apply_discount
+        return apply_discount(self._fee(settings.PLATFORM_FEE_PERCENT_TRANSPORTER), self.transporter)
 
     @property
     def shipper_paid(self):
