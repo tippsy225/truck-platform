@@ -1,0 +1,1595 @@
+openapi: 3.0.3
+info:
+  title: TruckLink API
+  version: 1.0.0
+  description: Loads, offers and trucks across Zimbabwe.
+paths:
+  /api/auth/logout/:
+    post:
+      operationId: auth_logout_create
+      summary: Delete the token you are using
+      tags:
+      - auth
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/auth/token/:
+    post:
+      operationId: auth_token_create
+      description: Exchange a username and password for an API token.
+      summary: Get an API token
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AuthToken'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AuthToken'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthToken'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+          description: ''
+  /api/loads/:
+    get:
+      operationId: loads_list
+      summary: Open loads, urgent first
+      parameters:
+      - in: query
+        name: cargo
+        schema:
+          type: string
+        description: Cargo type, for example general or perishable
+      - in: query
+        name: destination
+        schema:
+          type: string
+        description: Destination town
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: pickup
+        schema:
+          type: string
+        description: Pickup town
+      - in: query
+        name: truck
+        schema:
+          type: string
+        description: Show loads that this truck type can take
+      tags:
+      - loads
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLoadList'
+          description: ''
+    post:
+      operationId: loads_create
+      summary: Post a load (shippers)
+      tags:
+      - loads
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoadCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoadCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LoadCreate'
+        required: true
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Load'
+          description: ''
+  /api/loads/{id}/:
+    get:
+      operationId: loads_retrieve
+      summary: One load, with your offer, booking and contacts when they apply to
+        you
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - loads
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoadDetail'
+          description: ''
+  /api/loads/{id}/offers/:
+    get:
+      operationId: loads_offers_list
+      summary: 'Offers on a load: all of them for the shipper, only your own for a
+        transporter'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - loads
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOfferList'
+          description: ''
+    post:
+      operationId: loads_offers_create
+      summary: Send an offer (transporters)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - loads
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfferCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OfferCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OfferCreate'
+        required: true
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Offer'
+          description: ''
+  /api/loads/mine/:
+    get:
+      operationId: loads_mine_list
+      summary: Loads you posted (shippers)
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - loads
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLoadList'
+          description: ''
+  /api/me/:
+    get:
+      operationId: me_retrieve
+      summary: Your account
+      tags:
+      - me
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+          description: ''
+  /api/notifications/:
+    get:
+      operationId: notifications_list
+      summary: Your notifications, newest first
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - notifications
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificationList'
+          description: ''
+  /api/notifications/read/:
+    post:
+      operationId: notifications_read_create
+      summary: Mark all your notifications as read
+      tags:
+      - notifications
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  marked:
+                    type: integer
+          description: ''
+  /api/offers/{id}/accept/:
+    post:
+      operationId: offers_accept_create
+      summary: Accept the offer at its current price
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - offers
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Offer'
+          description: ''
+  /api/offers/{id}/counter/:
+    post:
+      operationId: offers_counter_create
+      summary: Answer with a new price
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - offers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Counter'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Counter'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Counter'
+        required: true
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Offer'
+          description: ''
+  /api/offers/{id}/decline/:
+    post:
+      operationId: offers_decline_create
+      summary: Decline the offer
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - offers
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Offer'
+          description: ''
+  /api/offers/{id}/withdraw/:
+    post:
+      operationId: offers_withdraw_create
+      summary: Withdraw your offer (transporters)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - offers
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Offer'
+          description: ''
+  /api/offers/mine/:
+    get:
+      operationId: offers_mine_list
+      summary: Offers you made (transporters)
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+        description: For example countered or accepted
+      tags:
+      - offers
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOfferList'
+          description: ''
+  /api/price-guide/:
+    get:
+      operationId: price_guide_retrieve
+      summary: Suggested price for a route and weight
+      parameters:
+      - in: query
+        name: destination
+        schema:
+          enum:
+          - Beitbridge
+          - Bindura
+          - Binga
+          - Bulawayo
+          - Chegutu
+          - Chimanimani
+          - Chinhoyi
+          - Chipinge
+          - Chiredzi
+          - Chirundu
+          - Chitungwiza
+          - Gokwe
+          - Gweru
+          - Harare
+          - Hwange
+          - Kadoma
+          - Kariba
+          - Karoi
+          - Kwekwe
+          - Lupane
+          - Marondera
+          - Masvingo
+          - Mt Darwin
+          - Mutare
+          - Mvurwi
+          - Norton
+          - Nyamapanda
+          - Plumtree
+          - Redcliff
+          - Rusape
+          - Ruwa
+          - Shamva
+          - Shurugwi
+          - Triangle
+          - Victoria Falls
+          - Zvishavane
+          type: string
+          minLength: 1
+        description: |-
+          * `Beitbridge` - Beitbridge
+          * `Bindura` - Bindura
+          * `Binga` - Binga
+          * `Bulawayo` - Bulawayo
+          * `Chegutu` - Chegutu
+          * `Chimanimani` - Chimanimani
+          * `Chinhoyi` - Chinhoyi
+          * `Chipinge` - Chipinge
+          * `Chiredzi` - Chiredzi
+          * `Chirundu` - Chirundu
+          * `Chitungwiza` - Chitungwiza
+          * `Gokwe` - Gokwe
+          * `Gweru` - Gweru
+          * `Harare` - Harare
+          * `Hwange` - Hwange
+          * `Kadoma` - Kadoma
+          * `Kariba` - Kariba
+          * `Karoi` - Karoi
+          * `Kwekwe` - Kwekwe
+          * `Lupane` - Lupane
+          * `Marondera` - Marondera
+          * `Masvingo` - Masvingo
+          * `Mt Darwin` - Mt Darwin
+          * `Mutare` - Mutare
+          * `Mvurwi` - Mvurwi
+          * `Norton` - Norton
+          * `Nyamapanda` - Nyamapanda
+          * `Plumtree` - Plumtree
+          * `Redcliff` - Redcliff
+          * `Rusape` - Rusape
+          * `Ruwa` - Ruwa
+          * `Shamva` - Shamva
+          * `Shurugwi` - Shurugwi
+          * `Triangle` - Triangle
+          * `Victoria Falls` - Victoria Falls
+          * `Zvishavane` - Zvishavane
+        required: true
+      - in: query
+        name: pickup
+        schema:
+          enum:
+          - Beitbridge
+          - Bindura
+          - Binga
+          - Bulawayo
+          - Chegutu
+          - Chimanimani
+          - Chinhoyi
+          - Chipinge
+          - Chiredzi
+          - Chirundu
+          - Chitungwiza
+          - Gokwe
+          - Gweru
+          - Harare
+          - Hwange
+          - Kadoma
+          - Kariba
+          - Karoi
+          - Kwekwe
+          - Lupane
+          - Marondera
+          - Masvingo
+          - Mt Darwin
+          - Mutare
+          - Mvurwi
+          - Norton
+          - Nyamapanda
+          - Plumtree
+          - Redcliff
+          - Rusape
+          - Ruwa
+          - Shamva
+          - Shurugwi
+          - Triangle
+          - Victoria Falls
+          - Zvishavane
+          type: string
+          minLength: 1
+        description: |-
+          * `Beitbridge` - Beitbridge
+          * `Bindura` - Bindura
+          * `Binga` - Binga
+          * `Bulawayo` - Bulawayo
+          * `Chegutu` - Chegutu
+          * `Chimanimani` - Chimanimani
+          * `Chinhoyi` - Chinhoyi
+          * `Chipinge` - Chipinge
+          * `Chiredzi` - Chiredzi
+          * `Chirundu` - Chirundu
+          * `Chitungwiza` - Chitungwiza
+          * `Gokwe` - Gokwe
+          * `Gweru` - Gweru
+          * `Harare` - Harare
+          * `Hwange` - Hwange
+          * `Kadoma` - Kadoma
+          * `Kariba` - Kariba
+          * `Karoi` - Karoi
+          * `Kwekwe` - Kwekwe
+          * `Lupane` - Lupane
+          * `Marondera` - Marondera
+          * `Masvingo` - Masvingo
+          * `Mt Darwin` - Mt Darwin
+          * `Mutare` - Mutare
+          * `Mvurwi` - Mvurwi
+          * `Norton` - Norton
+          * `Nyamapanda` - Nyamapanda
+          * `Plumtree` - Plumtree
+          * `Redcliff` - Redcliff
+          * `Rusape` - Rusape
+          * `Ruwa` - Ruwa
+          * `Shamva` - Shamva
+          * `Shurugwi` - Shurugwi
+          * `Triangle` - Triangle
+          * `Victoria Falls` - Victoria Falls
+          * `Zvishavane` - Zvishavane
+        required: true
+      - in: query
+        name: tonnes
+        schema:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+        required: true
+      tags:
+      - price-guide
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceGuide'
+          description: ''
+  /api/trucks/:
+    get:
+      operationId: trucks_list
+      summary: Available trucks
+      parameters:
+      - in: query
+        name: location
+        schema:
+          type: string
+      - in: query
+        name: min_capacity
+        schema:
+          type: number
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: type
+        schema:
+          type: string
+      tags:
+      - trucks
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTruckPublicList'
+          description: ''
+  /api/trucks/mine/:
+    get:
+      operationId: trucks_mine_list
+      summary: Your own trucks, with document dates (transporters)
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - trucks
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTruckOwnList'
+          description: ''
+  /api/wallet/:
+    get:
+      operationId: wallet_retrieve
+      summary: Your simulated wallet balance and recent entries
+      tags:
+      - wallet
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+          description: ''
+components:
+  schemas:
+    AuthToken:
+      type: object
+      properties:
+        username:
+          type: string
+          writeOnly: true
+        password:
+          type: string
+          writeOnly: true
+        token:
+          type: string
+          readOnly: true
+      required:
+      - password
+      - token
+      - username
+    Booking:
+      type: object
+      properties:
+        offer_id:
+          type: integer
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        shipper_fee:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        transporter_fee:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        shipper_paid:
+          type: boolean
+        transporter_paid:
+          type: boolean
+        fees_paid:
+          type: boolean
+        pay_deadline:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - fees_paid
+      - offer_id
+      - pay_deadline
+      - price
+      - shipper_fee
+      - shipper_paid
+      - transporter_fee
+      - transporter_paid
+    CargoTypeEnum:
+      enum:
+      - general
+      - bulk
+      - perishable
+      - fragile
+      - hazardous
+      - livestock
+      type: string
+      description: |-
+        * `general` - General cargo
+        * `bulk` - Bulk
+        * `perishable` - Perishable
+        * `fragile` - Fragile
+        * `hazardous` - Hazardous
+        * `livestock` - Livestock
+    Contact:
+      type: object
+      properties:
+        username:
+          type: string
+        phone:
+          type: string
+      required:
+      - phone
+      - username
+    Contacts:
+      type: object
+      properties:
+        shipper:
+          allOf:
+          - $ref: '#/components/schemas/Contact'
+          nullable: true
+        transporter:
+          $ref: '#/components/schemas/Contact'
+      required:
+      - shipper
+      - transporter
+    Counter:
+      type: object
+      properties:
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      required:
+      - price
+    LedgerEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        kind:
+          $ref: '#/components/schemas/LedgerEntryKindEnum'
+        kind_label:
+          type: string
+          readOnly: true
+        note:
+          type: string
+          maxLength: 200
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - amount
+      - created_at
+      - id
+      - kind
+      - kind_label
+    LedgerEntryKindEnum:
+      enum:
+      - topup
+      - withdraw
+      - escrow_hold
+      - escrow_release
+      - escrow_refund
+      - subscription
+      - referral_bonus
+      type: string
+      description: |-
+        * `topup` - Top up (simulated)
+        * `withdraw` - Withdrawal (simulated)
+        * `escrow_hold` - Moved into escrow
+        * `escrow_release` - Paid out of escrow
+        * `escrow_refund` - Refunded from escrow
+        * `subscription` - Plan subscription
+        * `referral_bonus` - Referral bonus
+    Load:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          maxLength: 100
+        pickup:
+          type: string
+          maxLength: 100
+        destination:
+          type: string
+          maxLength: 100
+        distance_km:
+          type: integer
+          nullable: true
+          readOnly: true
+        cargo_type:
+          $ref: '#/components/schemas/CargoTypeEnum'
+        weight_tonnes:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+        truck_type_needed:
+          $ref: '#/components/schemas/TruckTypeNeededEnum'
+        offered_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        urgency:
+          $ref: '#/components/schemas/UrgencyEnum'
+        pickup_date:
+          type: string
+          format: date
+          nullable: true
+        description:
+          type: string
+        insured:
+          type: boolean
+        insurance_provider:
+          type: string
+          maxLength: 100
+        coverage_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+        status:
+          $ref: '#/components/schemas/LoadStatusEnum'
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        shipper:
+          allOf:
+          - $ref: '#/components/schemas/UserBrief'
+          readOnly: true
+      required:
+      - created_at
+      - destination
+      - distance_km
+      - id
+      - offered_price
+      - pickup
+      - shipper
+      - title
+      - weight_tonnes
+    LoadCreate:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 100
+        pickup:
+          type: string
+          maxLength: 100
+        destination:
+          type: string
+          maxLength: 100
+        cargo_type:
+          $ref: '#/components/schemas/CargoTypeEnum'
+        weight_tonnes:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+        truck_type_needed:
+          $ref: '#/components/schemas/TruckTypeNeededEnum'
+        offered_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        urgency:
+          $ref: '#/components/schemas/UrgencyEnum'
+        pickup_date:
+          type: string
+          format: date
+          nullable: true
+        description:
+          type: string
+        insured:
+          type: boolean
+        insurance_provider:
+          type: string
+          maxLength: 100
+        coverage_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+      required:
+      - destination
+      - offered_price
+      - pickup
+      - title
+      - weight_tonnes
+    LoadDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          maxLength: 100
+        pickup:
+          type: string
+          maxLength: 100
+        destination:
+          type: string
+          maxLength: 100
+        distance_km:
+          type: integer
+          nullable: true
+          readOnly: true
+        cargo_type:
+          $ref: '#/components/schemas/CargoTypeEnum'
+        weight_tonnes:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+        truck_type_needed:
+          $ref: '#/components/schemas/TruckTypeNeededEnum'
+        offered_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        urgency:
+          $ref: '#/components/schemas/UrgencyEnum'
+        pickup_date:
+          type: string
+          format: date
+          nullable: true
+        description:
+          type: string
+        insured:
+          type: boolean
+        insurance_provider:
+          type: string
+          maxLength: 100
+        coverage_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+        status:
+          $ref: '#/components/schemas/LoadStatusEnum'
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        shipper:
+          allOf:
+          - $ref: '#/components/schemas/UserBrief'
+          readOnly: true
+        my_offer:
+          allOf:
+          - $ref: '#/components/schemas/Offer'
+          nullable: true
+          readOnly: true
+        booking:
+          allOf:
+          - $ref: '#/components/schemas/Booking'
+          nullable: true
+          readOnly: true
+        contacts:
+          allOf:
+          - $ref: '#/components/schemas/Contacts'
+          nullable: true
+          readOnly: true
+      required:
+      - booking
+      - contacts
+      - created_at
+      - destination
+      - distance_km
+      - id
+      - my_offer
+      - offered_price
+      - pickup
+      - shipper
+      - title
+      - weight_tonnes
+    LoadStatusEnum:
+      enum:
+      - open
+      - booked
+      - delivered
+      - expired
+      type: string
+      description: |-
+        * `open` - Open
+        * `booked` - Booked
+        * `delivered` - Delivered
+        * `expired` - Expired
+    Me:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        role:
+          type: string
+          nullable: true
+          readOnly: true
+        phone:
+          type: string
+          readOnly: true
+        both_roles:
+          type: boolean
+          readOnly: true
+        verified:
+          type: boolean
+          readOnly: true
+        plan:
+          type: string
+          readOnly: true
+        rating:
+          type: number
+          format: double
+          nullable: true
+          readOnly: true
+        rating_count:
+          type: integer
+          readOnly: true
+      required:
+      - both_roles
+      - email
+      - first_name
+      - id
+      - last_name
+      - phone
+      - plan
+      - rating
+      - rating_count
+      - role
+      - username
+      - verified
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        message:
+          type: string
+          maxLength: 255
+        url:
+          type: string
+          maxLength: 255
+        is_read:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - message
+    Offer:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        load:
+          type: integer
+          readOnly: true
+        transporter:
+          allOf:
+          - $ref: '#/components/schemas/UserBrief'
+          readOnly: true
+        truck:
+          allOf:
+          - $ref: '#/components/schemas/TruckBrief'
+          readOnly: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        message:
+          type: string
+          maxLength: 200
+        status:
+          $ref: '#/components/schemas/OfferStatusEnum'
+        your_turn:
+          type: boolean
+          readOnly: true
+        accepted_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/OfferEvent'
+          readOnly: true
+      required:
+      - created_at
+      - events
+      - id
+      - load
+      - price
+      - transporter
+      - truck
+      - your_turn
+    OfferCreate:
+      type: object
+      properties:
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        truck:
+          type: integer
+        message:
+          type: string
+          maxLength: 200
+      required:
+      - price
+      - truck
+    OfferEvent:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/OfferEventKindEnum'
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        actor:
+          type: string
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - actor
+      - created_at
+      - kind
+    OfferEventKindEnum:
+      enum:
+      - offer
+      - counter
+      - accept
+      - decline
+      - withdraw
+      - expire
+      type: string
+      description: |-
+        * `offer` - Offered
+        * `counter` - Countered
+        * `accept` - Accepted
+        * `decline` - Declined
+        * `withdraw` - Withdrawn
+        * `expire` - Expired
+    OfferStatusEnum:
+      enum:
+      - pending
+      - countered
+      - accepted
+      - declined
+      - withdrawn
+      - expired
+      type: string
+      description: |-
+        * `pending` - Awaiting shipper
+        * `countered` - Awaiting transporter
+        * `accepted` - Accepted
+        * `declined` - Declined
+        * `withdrawn` - Withdrawn
+        * `expired` - Expired
+    PaginatedLoadList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Load'
+    PaginatedNotificationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+    PaginatedOfferList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Offer'
+    PaginatedTruckOwnList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TruckOwn'
+    PaginatedTruckPublicList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TruckPublic'
+    PriceGuide:
+      type: object
+      properties:
+        distance_km:
+          type: integer
+        suggested:
+          type: integer
+        low:
+          type: integer
+        high:
+          type: integer
+        basis:
+          type: string
+        samples:
+          type: integer
+        note:
+          type: string
+      required:
+      - basis
+      - distance_km
+      - high
+      - low
+      - note
+      - samples
+      - suggested
+    TruckBrief:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        truck_type:
+          $ref: '#/components/schemas/TruckTypeEnum'
+        capacity_tonnes:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+        make:
+          type: string
+          maxLength: 50
+        vehicle_model:
+          type: string
+          maxLength: 50
+        year:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+      required:
+      - capacity_tonnes
+      - id
+      - truck_type
+    TruckOwn:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        truck_type:
+          $ref: '#/components/schemas/TruckTypeEnum'
+        capacity_tonnes:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+        registration_number:
+          type: string
+          maxLength: 20
+        make:
+          type: string
+          maxLength: 50
+        vehicle_model:
+          type: string
+          maxLength: 50
+        year:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+        axle_configuration:
+          type: string
+          maxLength: 20
+        volume_cbm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,2})?$
+          nullable: true
+        current_location:
+          type: string
+          maxLength: 100
+        available_from:
+          type: string
+          format: date
+          nullable: true
+        insurance_expiry:
+          type: string
+          format: date
+          nullable: true
+        roadworthy_expiry:
+          type: string
+          format: date
+          nullable: true
+        documents_ok:
+          type: boolean
+          readOnly: true
+        is_available:
+          type: boolean
+      required:
+      - capacity_tonnes
+      - current_location
+      - documents_ok
+      - id
+      - registration_number
+      - truck_type
+    TruckPublic:
+      type: object
+      description: 'What other people see: no registration plate and no document dates.'
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        truck_type:
+          $ref: '#/components/schemas/TruckTypeEnum'
+        capacity_tonnes:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+        make:
+          type: string
+          maxLength: 50
+        vehicle_model:
+          type: string
+          maxLength: 50
+        year:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+        axle_configuration:
+          type: string
+          maxLength: 20
+        volume_cbm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,2})?$
+          nullable: true
+        current_location:
+          type: string
+          maxLength: 100
+        available_from:
+          type: string
+          format: date
+          nullable: true
+        owner:
+          allOf:
+          - $ref: '#/components/schemas/UserBrief'
+          readOnly: true
+      required:
+      - capacity_tonnes
+      - current_location
+      - id
+      - owner
+      - truck_type
+    TruckTypeEnum:
+      enum:
+      - flatbed
+      - tipper
+      - tanker
+      - refrigerated
+      - box
+      - lowbed
+      type: string
+      description: |-
+        * `flatbed` - Flatbed
+        * `tipper` - Tipper
+        * `tanker` - Tanker
+        * `refrigerated` - Refrigerated
+        * `box` - Closed box / lorry
+        * `lowbed` - Lowbed
+    TruckTypeNeededEnum:
+      enum:
+      - any
+      - flatbed
+      - tipper
+      - tanker
+      - refrigerated
+      - box
+      - lowbed
+      type: string
+      description: |-
+        * `any` - Any truck
+        * `flatbed` - Flatbed
+        * `tipper` - Tipper
+        * `tanker` - Tanker
+        * `refrigerated` - Refrigerated
+        * `box` - Closed box / lorry
+        * `lowbed` - Lowbed
+    UrgencyEnum:
+      enum:
+      - standard
+      - urgent
+      - scheduled
+      type: string
+      description: |-
+        * `standard` - Standard (1 to 3 days)
+        * `urgent` - Urgent (same day)
+        * `scheduled` - Scheduled (fixed date)
+    UserBrief:
+      type: object
+      properties:
+        username:
+          type: string
+        verified:
+          type: boolean
+          readOnly: true
+        rating:
+          type: number
+          format: double
+          nullable: true
+          readOnly: true
+        rating_count:
+          type: integer
+          readOnly: true
+      required:
+      - rating
+      - rating_count
+      - username
+      - verified
+    Wallet:
+      type: object
+      properties:
+        balance:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/LedgerEntry'
+      required:
+      - balance
+      - entries
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"

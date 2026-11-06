@@ -45,6 +45,10 @@ INSTALLED_APPS = [
     'reach',
     'tracking',
     'growth',
+    'rest_framework',
+    'rest_framework.authtoken',
+    'drf_spectacular',
+    'api',
 ]
 
 MIDDLEWARE = [
@@ -166,3 +170,30 @@ SITE_URL = 'http://127.0.0.1:8000'
 ALERT_BACKEND = 'outbox'   # 'outbox' only records alerts. 'twilio' sends them through Twilio (see reach/backends.py)
 REFERRAL_BONUS = '2.00'        # simulated wallet credit for each side
 REFERRAL_MAX_REWARDS = 20      # rewarded referrals allowed per person
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated'],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.ScopedRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {'anon': '30/min', 'user': '120/min', 'login': '10/min'},
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'TruckLink API',
+    'DESCRIPTION': 'Loads, offers and trucks across Zimbabwe.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'ENUM_NAME_OVERRIDES': {
+        'LoadStatusEnum': 'loads.models.Load.STATUS_CHOICES',
+        'OfferStatusEnum': 'loads.models.Offer.STATUS_CHOICES',
+    },
+}
