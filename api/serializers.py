@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.urls import reverse
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
@@ -8,7 +9,8 @@ from accounts.models import Notification, rating_summary
 from growth.plans import current_plan_key
 from loads.models import Load, Offer, OfferEvent
 from loads.pricing import TOWNS, distance_km
-from trucks.models import Truck
+from trucks.models import Truck, TruckPhoto
+from trucks.photos import photo_requirement_message
 from wallet.models import LedgerEntry
 
 from .rules import accepted_offer, role_of, side_of
@@ -84,31 +86,59 @@ class MeSerializer(serializers.Serializer):
         return rating_summary(user)[1]
 
 
+class TruckPhotoSerializer(serializers.ModelSerializer):
+    """Picture addresses. They only open for someone who is signed in (a session or a token)."""
+    url = serializers.SerializerMethodField()
+    thumb_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TruckPhoto
+        fields = ['id', 'kind', 'url', 'thumb_url']
+
+    def _link(self, photo, size):
+        path = reverse('truck_photo_file', args=[photo.pk, size])
+        request = self.context.get('request')
+        return request.build_absolute_uri(path) if request is not None else path
+
+    @extend_schema_field(serializers.CharField())
+    def get_url(self, photo):
+        return self._link(photo, 'full')
+
+    @extend_schema_field(serializers.CharField())
+    def get_thumb_url(self, photo):
+        return self._link(photo, 'thumb')
+
+
 class TruckBriefSerializer(serializers.ModelSerializer):
+    photos = TruckPhotoSerializer(many=True, read_only=True)
+
     class Meta:
         model = Truck
-        fields = ['id', 'truck_type', 'capacity_tonnes', 'make', 'vehicle_model', 'year']
+        fields = ['id', 'truck_type', 'capacity_tonnes', 'make', 'vehicle_model', 'year', 'photos']
 
 
 class TruckPublicSerializer(serializers.ModelSerializer):
     """What other people see: no registration plate and no document dates."""
     owner = UserBriefSerializer(read_only=True)
+    photos = TruckPhotoSerializer(many=True, read_only=True)
 
     class Meta:
         model = Truck
         fields = ['id', 'truck_type', 'capacity_tonnes', 'make', 'vehicle_model', 'year',
-                  'axle_configuration', 'volume_cbm', 'current_location', 'available_from', 'owner']
+                  'axle_configuration', 'volume_cbm', 'current_location', 'available_from',
+                  'owner', 'photos']
 
 
 class TruckOwnSerializer(serializers.ModelSerializer):
     documents_ok = serializers.BooleanField(read_only=True)
+    photos = TruckPhotoSerializer(many=True, read_only=True)
 
     class Meta:
         model = Truck
         fields = ['id', 'truck_type', 'capacity_tonnes', 'registration_number', 'make',
                   'vehicle_model', 'year', 'axle_configuration', 'volume_cbm',
                   'current_location', 'available_from', 'insurance_expiry',
-                  'roadworthy_expiry', 'documents_ok', 'is_available']
+                  'roadworthy_expiry', 'documents_ok', 'is_available', 'photos']
 
 
 class OfferEventSerializer(serializers.ModelSerializer):
@@ -167,6 +197,9 @@ class OfferCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("This truck's insurance has expired. Update the truck before you bid.")
         if truck.roadworthy_expired:
             raise serializers.ValidationError("This truck's roadworthy certificate has expired. Update the truck before you bid.")
+        problem = photo_requirement_message(truck)
+        if problem:
+            raise serializers.ValidationError(problem)
         load = self.context.get('load')
         if load is not None:
             if truck.capacity_tonnes < load.weight_tonnes:

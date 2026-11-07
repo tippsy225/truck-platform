@@ -67,7 +67,8 @@ def book(load, transporter, price='700', paid='both', accepted_at=None):
     return offer
 
 
-@override_settings(PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'])
+@override_settings(PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'],
+                   REQUIRE_TRUCK_PHOTOS=False)
 class BaseTestCase(TestCase):
     # The fast test hasher keeps the test run quick. Real logins still use Django's strong default.
     def setUp(self):

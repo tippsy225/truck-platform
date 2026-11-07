@@ -15,6 +15,7 @@
           <span class="badge {% if trip.status == 'open' %}bg-success{% else %}bg-secondary{% endif %}">{{ trip.get_status_display }}</span>
         </div>
         <p class="mb-2 small">Transporter: {% trust_chip trip.owner %}</p>
+          {% include 'trucks/_truck_strip.html' with truck=trip.truck %}
         <div class="chips">
           {% if trip.negotiable %}<span class="chip chip-ok">Price negotiable</span>{% else %}<span class="chip">Fixed price</span>{% endif %}
           {% if trip.truck.make %}<span class="chip">{{ trip.truck.make }} {{ trip.truck.vehicle_model }}</span>{% endif %}

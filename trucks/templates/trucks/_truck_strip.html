@@ -1,0 +1,13 @@
+{% if truck %}
+<span class="d-flex flex-wrap align-items-center gap-2 my-1">
+  {% for photo in truck.photos.all|slice:":3" %}
+  <a href="{% url 'truck_detail' truck.pk %}"><img src="{% url 'truck_photo_file' photo.pk 'thumb' %}" alt="{{ photo.get_kind_display }} of the truck" width="72" height="54" loading="lazy" style="object-fit:cover;border-radius:8px;border:1px solid var(--line);"></a>
+  {% empty %}
+  <span class="chip chip-warn">No photos yet</span>
+  {% endfor %}
+  <span class="small">
+    {{ truck.get_truck_type_display }}{% if truck.make %}, {{ truck.make }}{% endif %}{% if truck.year %} {{ truck.year }}{% endif %},
+    <a href="{% url 'truck_detail' truck.pk %}">view truck</a>
+  </span>
+</span>
+{% endif %}

@@ -1388,9 +1388,15 @@ components:
           minimum: 0
           format: int64
           nullable: true
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/TruckPhoto'
+          readOnly: true
       required:
       - capacity_tonnes
       - id
+      - photos
       - truck_type
     TruckOwn:
       type: object
@@ -1447,13 +1453,53 @@ components:
           readOnly: true
         is_available:
           type: boolean
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/TruckPhoto'
+          readOnly: true
       required:
       - capacity_tonnes
       - current_location
       - documents_ok
       - id
+      - photos
       - registration_number
       - truck_type
+    TruckPhoto:
+      type: object
+      description: Picture addresses. They only open for someone who is signed in
+        (a session or a token).
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        kind:
+          $ref: '#/components/schemas/TruckPhotoKindEnum'
+        url:
+          type: string
+          readOnly: true
+        thumb_url:
+          type: string
+          readOnly: true
+      required:
+      - id
+      - thumb_url
+      - url
+    TruckPhotoKindEnum:
+      enum:
+      - front
+      - side
+      - back
+      - cargo
+      - other
+      type: string
+      description: |-
+        * `front` - Front
+        * `side` - Side
+        * `back` - Back
+        * `cargo` - Cargo bed or body
+        * `other` - Other
     TruckPublic:
       type: object
       description: 'What other people see: no registration plate and no document dates.'
@@ -1498,11 +1544,17 @@ components:
           allOf:
           - $ref: '#/components/schemas/UserBrief'
           readOnly: true
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/TruckPhoto'
+          readOnly: true
       required:
       - capacity_tonnes
       - current_location
       - id
       - owner
+      - photos
       - truck_type
     TruckTypeEnum:
       enum:

@@ -58,6 +58,7 @@
           <div><dt>Free space</dt><dd>{{ trip.tonnes_left }} t</dd></div>
         </dl>
         <p class="mb-2 small">Transporter: {% trust_chip trip.owner %}</p>
+          {% include 'trucks/_truck_strip.html' with truck=trip.truck %}
         <div class="load-foot mt-auto">
           <div class="price"><span class="price-label">Per tonne</span><strong>${{ trip.price_per_tonne }}</strong></div>
           <a href="{% url 'space_trip' trip.pk %}" class="btn btn-primary">View and request space</a>

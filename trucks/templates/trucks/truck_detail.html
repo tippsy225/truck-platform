@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% load trust_tags %}
+
+{% block title %}{{ truck.get_truck_type_display }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ truck.get_truck_type_display }}, {{ truck.capacity_tonnes }} t</h1>
+  <p class="mb-0">Transporter: {% trust_chip truck.owner %}</p>
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-lg-7">
+    {% if photos %}
+    <a href="{% url 'truck_photo_file' photos.0.pk 'full' %}" target="_blank" rel="noopener"><img id="main-photo" src="{% url 'truck_photo_file' photos.0.pk 'full' %}" alt="{{ photos.0.get_kind_display }} of the truck" style="width:100%;border-radius:12px;border:1px solid var(--line);"></a>
+    <div class="d-flex flex-wrap gap-2 mt-2">
+      {% for photo in photos %}
+      <a href="{% url 'truck_photo_file' photo.pk 'full' %}" target="_blank" rel="noopener" title="{{ photo.get_kind_display }}"><img src="{% url 'truck_photo_file' photo.pk 'thumb' %}" alt="{{ photo.get_kind_display }} of the truck" width="96" height="72" loading="lazy" style="object-fit:cover;border-radius:8px;border:1px solid var(--line);"></a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">This transporter has not added photos of the truck yet.{% if is_owner %} <a href="{% url 'truck_photos' truck.pk %}">Add photos</a>.{% endif %}</div>
+    {% endif %}
+    {% if is_owner %}<p class="mt-3"><a href="{% url 'truck_photos' truck.pk %}" class="btn btn-outline-primary">Manage photos</a></p>{% endif %}
+  </div>
+
+  <div class="col-12 col-lg-5">
+    <div class="card"><div class="card-body">
+      <div class="chips">
+        {% if truck.insurance_expired %}<span class="chip chip-urgent">Insurance expired</span>
+        {% elif truck.insurance_expiry %}<span class="chip chip-ok">Insurance not expired</span>
+        {% else %}<span class="chip chip-warn">Insurance date not given</span>{% endif %}
+        {% if truck.roadworthy_expired %}<span class="chip chip-urgent">Roadworthy expired</span>
+        {% elif truck.roadworthy_expiry %}<span class="chip chip-ok">Roadworthy not expired</span>
+        {% else %}<span class="chip chip-warn">Roadworthy date not given</span>{% endif %}
+      </div>
+      <p class="small muted">Document dates are entered by the transporter and are not verified by TruckLink.</p>
+      <dl class="facts">
+        <div><dt>Type</dt><dd>{{ truck.get_truck_type_display }}</dd></div>
+        <div><dt>Capacity</dt><dd>{{ truck.capacity_tonnes }} t</dd></div>
+        {% if truck.make %}<div><dt>Make and model</dt><dd>{{ truck.make }} {{ truck.vehicle_model }}</dd></div>{% endif %}
+        {% if truck.year %}<div><dt>Year</dt><dd>{{ truck.year }}</dd></div>{% endif %}
+        {% if truck.axle_configuration %}<div><dt>Axles</dt><dd>{{ truck.axle_configuration }}</dd></div>{% endif %}
+        {% if truck.volume_cbm %}<div><dt>Volume</dt><dd>{{ truck.volume_cbm }} CBM</dd></div>{% endif %}
+        <div><dt>Now in</dt><dd>{{ truck.current_location }}</dd></div>
+        <div><dt>Available from</dt><dd>{{ truck.available_from|date:"d M Y"|default:"Now" }}</dd></div>
+        {% if can_see_plate %}<div><dt>Registration plate</dt><dd>{{ truck.registration_number }}</dd></div>{% endif %}
+      </dl>
+      {% if not can_see_plate %}<p class="small muted mb-0">The registration plate is shown to you once you have booked this truck.</p>{% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

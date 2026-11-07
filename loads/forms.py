@@ -4,6 +4,7 @@ from django import forms
 from django.utils import timezone
 
 from trucks.models import Truck
+from trucks.photos import photo_requirement_message
 
 from .models import Load, Offer
 from .pricing import town_choices
@@ -77,6 +78,9 @@ class OfferForm(forms.ModelForm):
             raise forms.ValidationError('This truck\'s insurance has expired. Update the truck before you bid.')
         if truck.roadworthy_expired:
             raise forms.ValidationError('This truck\'s roadworthy certificate has expired. Update the truck before you bid.')
+        problem = photo_requirement_message(truck)
+        if problem:
+            raise forms.ValidationError(problem)
         load = self.load
         if load is not None:
             if truck.capacity_tonnes < load.weight_tonnes:

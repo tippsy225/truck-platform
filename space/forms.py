@@ -6,6 +6,7 @@ from django.utils import timezone
 from loads.models import Load
 from loads.pricing import TOWNS, town_choices
 from trucks.models import Truck
+from trucks.photos import photo_requirement_message
 
 from .matching import route_fit
 from .models import Trip
@@ -43,6 +44,9 @@ class TripForm(forms.ModelForm):
             raise forms.ValidationError("This truck's insurance has expired. Update it first.")
         if truck.roadworthy_expired:
             raise forms.ValidationError("This truck's roadworthy certificate has expired. Update it first.")
+        problem = photo_requirement_message(truck)
+        if problem:
+            raise forms.ValidationError(problem)
         return truck
 
     def clean_via(self):
@@ -113,16 +117,20 @@ class SpaceRequestForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.trip = trip
         stops = trip.stops
-        self.fields['pickup'].choices = [(s, s) for s in stops[:-1]]
-        self.fields['dropoff'].choices = [(s, s) for s in stops[1:]]
+        self.fields['pickup'].choices = [(stop, stop) for stop in stops[:-1]]
+        self.fields['dropoff'].choices = [(stop, stop) for stop in stops[1:]]
         self.initial.setdefault('price_per_tonne', trip.price_per_tonne)
         if not trip.negotiable:
             self.fields['price_per_tonne'].disabled = True
             self.initial['price_per_tonne'] = trip.price_per_tonne
         if load is not None:
-            self.initial.update(cargo=load.title, cargo_type=load.cargo_type,
-                                pickup=load.pickup, dropoff=load.destination,
-                                tonnes=load.weight_tonnes)
+            self.initial.update(
+                cargo=load.title,
+                cargo_type=load.cargo_type,
+                pickup=load.pickup,
+                dropoff=load.destination,
+                tonnes=load.weight_tonnes,
+            )
             for name in ('cargo', 'cargo_type', 'pickup', 'dropoff', 'tonnes'):
                 self.fields[name].disabled = True
 

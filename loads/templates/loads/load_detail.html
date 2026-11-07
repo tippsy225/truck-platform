@@ -174,9 +174,7 @@
           <div>
             <strong>${{ offer.price }}</strong> from {% trust_chip offer.transporter %}
             <span class="badge bg-secondary">{{ offer.get_status_display }}</span><br>
-            {% if offer.truck %}
-              <span class="small muted">{{ offer.truck }}{% if offer.truck.make %}, {{ offer.truck.make }}{% endif %}{% if offer.truck.year %} {{ offer.truck.year }}{% endif %}</span><br>
-            {% endif %}
+                       {% include 'trucks/_truck_strip.html' with truck=offer.truck %} 
             {% if offer.message %}<span class="small">{{ offer.message }}</span>{% endif %}
           </div>
         </div>

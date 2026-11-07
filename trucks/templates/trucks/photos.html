@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}Truck photos{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Photos of {{ truck.get_truck_type_display }} {{ truck.registration_number }}</h1>
+  <p class="muted mb-0">Cargo owners want to see the truck they are dealing with. Clear photos build trust and win more jobs. <a href="{% url 'my_trucks' %}">Back to my trucks</a></p>
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-lg-5">
+    {% if room %}
+    <form method="post" enctype="multipart/form-data" class="card p-4">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit" class="btn btn-primary">Add photo</button>
+      <p class="small muted mt-3 mb-0">Show the front, the side, the back and the cargo bed. Photos are resized, and hidden data such as the place a photo was taken is removed. Only people who are logged in to TruckLink can see them. You can add up to {{ max_photos }}.</p>
+    </form>
+    {% else %}
+    <div class="empty">This truck has the maximum of {{ max_photos }} photos. Delete one to add another.</div>
+    {% endif %}
+  </div>
+
+  <div class="col-12 col-lg-7">
+    <div class="row g-3">
+      {% for photo in photos %}
+      <div class="col-6 col-md-4">
+        <div class="card h-100">
+          <a href="{% url 'truck_photo_file' photo.pk 'full' %}" target="_blank" rel="noopener"><img src="{% url 'truck_photo_file' photo.pk 'thumb' %}" alt="{{ photo.get_kind_display }} of the truck" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:12px 12px 0 0;" loading="lazy"></a>
+          <div class="card-body p-2 d-flex justify-content-between align-items-center">
+            <span class="small">{{ photo.get_kind_display }}</span>
+            <form method="post" action="{% url 'delete_truck_photo' truck.pk photo.pk %}" onsubmit="return confirm('Delete this photo?');">
+              {% csrf_token %}<button class="btn btn-sm btn-outline-danger">Delete</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="col-12"><div class="empty">No photos yet. Add the first one.</div></div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

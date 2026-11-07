@@ -197,3 +197,4 @@ SPECTACULAR_SETTINGS = {
         'OfferStatusEnum': 'loads.models.Offer.STATUS_CHOICES',
     },
 }
+REQUIRE_TRUCK_PHOTOS = True   # a truck needs at least one photo before it can bid or post a trip

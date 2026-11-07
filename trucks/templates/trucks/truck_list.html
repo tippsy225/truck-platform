@@ -6,7 +6,7 @@
 {% block content %}
 <div class="page-head">
   <h1>Available trucks</h1>
-  <p class="muted mb-0">Trucks ready to take a load. Post a load and transporters will send you offers.</p>
+  <p class="muted mb-0">Trucks ready to take a load, with photos so you can see what you are dealing with. Post a load and transporters will send you offers.</p>
 </div>
 
 <form method="get" class="filters">
@@ -38,6 +38,13 @@
   {% for truck in trucks %}
   <div class="col-12 col-md-6 col-xl-4">
     <article class="card h-100">
+      {% with photo=truck.photos.all.0 %}
+      {% if photo %}
+      <a href="{% url 'truck_detail' truck.pk %}"><img src="{% url 'truck_photo_file' photo.pk 'thumb' %}" alt="{{ photo.get_kind_display }} of the truck" loading="lazy" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:12px 12px 0 0;"></a>
+      {% else %}
+      <div class="d-flex align-items-center justify-content-center muted" style="aspect-ratio:4/3;background:var(--mist);border-radius:12px 12px 0 0;">No photo yet</div>
+      {% endif %}
+      {% endwith %}
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-start">
           <h2 class="load-title">{{ truck.get_truck_type_display }}</h2>
@@ -48,14 +55,14 @@
           {% if truck.make %}<span class="chip">{{ truck.make }} {{ truck.vehicle_model }}</span>{% endif %}
           {% if truck.year %}<span class="chip">{{ truck.year }}</span>{% endif %}
           {% if truck.axle_configuration %}<span class="chip">{{ truck.axle_configuration }}</span>{% endif %}
-          {% if truck.insurance_expiry and truck.roadworthy_expiry %}<span class="chip chip-ok">Document dates on file</span>{% else %}<span class="chip chip-warn">Document dates missing</span>{% endif %}
+          {% if truck.photos.all|length %}<span class="chip chip-ok">{{ truck.photos.all|length }} photo{{ truck.photos.all|length|pluralize }}</span>{% else %}<span class="chip chip-warn">No photos</span>{% endif %}
         </div>
         <dl class="facts">
           <div><dt>Available from</dt><dd>{{ truck.available_from|date:"d M Y"|default:"Now" }}</dd></div>
           {% if truck.volume_cbm %}<div><dt>Volume</dt><dd>{{ truck.volume_cbm }} CBM</dd></div>{% endif %}
         </dl>
         <p class="mb-2 small">Transporter: {% trust_chip truck.owner %}</p>
-        <p class="small muted mb-0">Document dates are entered by the transporter and are not yet verified. Contact details unlock after booking.</p>
+        <a href="{% url 'truck_detail' truck.pk %}" class="btn btn-sm btn-outline-primary">View truck and photos</a>
       </div>
     </article>
   </div>
